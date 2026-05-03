@@ -106,7 +106,8 @@ def assume_role(account_id: str):
     role_arn = f"arn:aws:iam::{account_id}:role/WorkSpacesLifecycleRole"
     response = sts.assume_role(
         RoleArn=role_arn,
-        RoleSessionName='WorkSpacesImageCleanup'
+        RoleSessionName='WorkSpacesImageCleanup',
+        ExternalId='WorkSpacesLifecycle-COSE'
     )
     creds = response['Credentials']
     return {

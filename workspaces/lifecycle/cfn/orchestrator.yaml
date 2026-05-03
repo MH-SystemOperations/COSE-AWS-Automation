@@ -42,9 +42,24 @@ Resources:
             ProjectionType: ALL
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
       Tags:
-        - Key: Purpose
-          Value: WorkSpacesLifecycleAutomation
+        - Key: Owner
+          Value: COSE
+        - Key: Department
+          Value: IT Operations
+        - Key: Application
+          Value: WorkSpaces Lifecycle Automation
+        - Key: Environment
+          Value: prod
+        - Key: CreatedBy
+          Value: CloudFormation
+        - Key: ManagedBy
+          Value: COSE-AWS-Automation
+        - Key: CostCenter
+          Value: Platform Engineering
 
   # SNS topic for notifications
   NotificationsTopic:
@@ -52,12 +67,27 @@ Resources:
     Properties:
       TopicName: WorkSpacesLifecycleNotifications
       DisplayName: 'WorkSpaces Lifecycle Notifications'
+      KmsMasterKeyId: alias/aws/sns
+      Tags:
+        - Key: Owner
+          Value: COSE
+        - Key: Department
+          Value: IT Operations
+        - Key: Application
+          Value: WorkSpaces Lifecycle Automation
+        - Key: Environment
+          Value: prod
+        - Key: CreatedBy
+          Value: CloudFormation
+        - Key: ManagedBy
+          Value: COSE-AWS-Automation
 
   # Lambda execution role
   LifecycleManagerRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: WorkSpacesLifecycleManagerRole
+      Description: 'Execution role for WorkSpaces lifecycle automation Lambdas'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -65,8 +95,24 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                'aws:SourceAccount': !Ref 'AWS::AccountId'
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Owner
+          Value: COSE
+        - Key: Department
+          Value: IT Operations
+        - Key: Application
+          Value: WorkSpaces Lifecycle Automation
+        - Key: Environment
+          Value: prod
+        - Key: CreatedBy
+          Value: CloudFormation
+        - Key: ManagedBy
+          Value: COSE-AWS-Automation
       Policies:
         - PolicyName: LifecycleManagerPolicy
           PolicyDocument:
@@ -86,10 +132,14 @@ Resources:
                 Action:
                   - sns:Publish
                 Resource: !Ref NotificationsTopic
-              - Effect: Allow
+              - Sid: AssumeRoleCrossAccount
+                Effect: Allow
                 Action:
                   - sts:AssumeRole
-                Resource: 'arn:aws:iam::*:role/WorkSpacesLifecycleRole'
+                Resource:
+                  - !Sub 'arn:aws:iam::266565038828:role/WorkSpacesLifecycleRole'
+                  - !Sub 'arn:aws:iam::971318514578:role/WorkSpacesLifecycleRole'
+                  - !Sub 'arn:aws:iam::480202104756:role/WorkSpacesLifecycleRole'
               - Effect: Allow
                 Action:
                   - ssm:GetParameter
@@ -105,11 +155,13 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: WorkSpacesLifecycleManager
+      Description: 'Scans WorkSpaces for unused resources and manages lifecycle'
       Runtime: python3.11
       Handler: index.lambda_handler
       Role: !GetAtt LifecycleManagerRole.Arn
       Timeout: 900
       MemorySize: 512
+      ReservedConcurrentExecutions: 1
       Environment:
         Variables:
           DRY_RUN_MODE: !Ref DryRunMode
@@ -124,17 +176,32 @@ Resources:
           print('Placeholder - deploy actual code separately')
           def lambda_handler(event, context):
               return {'statusCode': 200, 'body': json.dumps('Placeholder')}
+      Tags:
+        - Key: Owner
+          Value: COSE
+        - Key: Department
+          Value: IT Operations
+        - Key: Application
+          Value: WorkSpaces Lifecycle Automation
+        - Key: Environment
+          Value: prod
+        - Key: CreatedBy
+          Value: CloudFormation
+        - Key: ManagedBy
+          Value: COSE-AWS-Automation
 
   # Lambda for image cleanup
   ImageCleanupFunction:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: WorkSpacesImageCleanup
+      Description: 'Cleans up expired WorkSpace backup images'
       Runtime: python3.11
       Handler: index.lambda_handler
       Role: !GetAtt LifecycleManagerRole.Arn
       Timeout: 300
       MemorySize: 256
+      ReservedConcurrentExecutions: 1
       Environment:
         Variables:
           DRY_RUN_MODE: !Ref DryRunMode
@@ -146,6 +213,19 @@ Resources:
           print('Placeholder - deploy actual code separately')
           def lambda_handler(event, context):
               return {'statusCode': 200, 'body': json.dumps('Placeholder')}
+      Tags:
+        - Key: Owner
+          Value: COSE
+        - Key: Department
+          Value: IT Operations
+        - Key: Application
+          Value: WorkSpaces Lifecycle Automation
+        - Key: Environment
+          Value: prod
+        - Key: CreatedBy
+          Value: CloudFormation
+        - Key: ManagedBy
+          Value: COSE-AWS-Automation
 
   # EventBridge rule for weekly lifecycle scan
   WeeklyScheduleRule:

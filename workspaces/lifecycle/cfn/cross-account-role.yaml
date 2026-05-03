@@ -20,6 +20,9 @@ Resources:
             Principal:
               AWS: !Sub 'arn:aws:iam::${ManagementAccountId}:role/WorkSpacesLifecycleManagerRole'
             Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                'sts:ExternalId': 'WorkSpacesLifecycle-COSE'
       Policies:
         - PolicyName: WorkSpacesLifecyclePolicy
           PolicyDocument:
@@ -45,10 +48,20 @@ Resources:
                   - cloudwatch:GetMetricStatistics
                 Resource: '*'
       Tags:
+        - Key: Owner
+          Value: COSE
+        - Key: Department
+          Value: IT Operations
+        - Key: Application
+          Value: WorkSpaces Lifecycle Automation
+        - Key: Environment
+          Value: prod
+        - Key: CreatedBy
+          Value: CloudFormation
         - Key: ManagedBy
           Value: COSE-AWS-Automation
         - Key: Purpose
-          Value: WorkSpacesLifecycle
+          Value: Cross-account WorkSpaces lifecycle management
 
 Outputs:
   RoleArn:
