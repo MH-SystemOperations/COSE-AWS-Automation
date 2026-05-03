@@ -183,7 +183,7 @@ Resources:
   DailyCleanupPermission:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !GetAtt ImageCleanupFunction
+      FunctionName: !Ref ImageCleanupFunction
       Action: lambda:InvokeFunction
       Principal: events.amazonaws.com
       SourceArn: !GetAtt DailyCleanupRule.Arn
