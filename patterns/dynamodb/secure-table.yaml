@@ -1,0 +1,69 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'COSE Standard Pattern: Secure DynamoDB Table'
+
+Parameters:
+  TableName:
+    Type: String
+    Description: 'Name of the DynamoDB table'
+
+  OwnerTag:
+    Type: String
+    Default: 'COSE'
+    Description: 'Owner team name'
+
+  ApplicationTag:
+    Type: String
+    Description: 'Application name'
+
+  EnvironmentTag:
+    Type: String
+    Default: 'prod'
+    AllowedValues: ['dev', 'qa', 'staging', 'prod']
+    Description: 'Environment'
+
+Resources:
+  Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref TableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PrimaryKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PrimaryKey
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+      Tags:
+        - Key: Owner
+          Value: !Ref OwnerTag
+        - Key: Department
+          Value: IT Operations
+        - Key: Application
+          Value: !Ref ApplicationTag
+        - Key: Environment
+          Value: !Ref EnvironmentTag
+        - Key: CreatedBy
+          Value: CloudFormation
+        - Key: ManagedBy
+          Value: COSE-AWS-Automation
+
+Outputs:
+  TableName:
+    Value: !Ref Table
+    Export:
+      Name: !Sub '${AWS::StackName}-TableName'
+  TableArn:
+    Value: !GetAtt Table.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-TableArn'
+
+# COSE Standard: All DynamoDB tables MUST have:
+# - Encryption at rest (KMS)
+# - Point-in-time recovery enabled
+# - PAY_PER_REQUEST billing (no provisioned capacity)
+# - Standard tags (Owner, Department, Application, Environment, CreatedBy, ManagedBy)

@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'COSE Standard Pattern: Lambda Execution Role with Least Privilege'
+
+Parameters:
+  RoleName:
+    Type: String
+    Description: 'Name of the IAM role'
+
+  ApplicationTag:
+    Type: String
+    Description: 'Application name'
+
+  EnvironmentTag:
+    Type: String
+    Default: 'prod'
+    AllowedValues: ['dev', 'qa', 'staging', 'prod']
+
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RoleName
+      Description: !Sub 'Lambda execution role for ${ApplicationTag}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                'aws:SourceAccount': !Ref 'AWS::AccountId'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Tags:
+        - Key: Owner
+          Value: COSE
+        - Key: Department
+          Value: IT Operations
+        - Key: Application
+          Value: !Ref ApplicationTag
+        - Key: Environment
+          Value: !Ref EnvironmentTag
+        - Key: CreatedBy
+          Value: CloudFormation
+        - Key: ManagedBy
+          Value: COSE-AWS-Automation
+
+Outputs:
+  RoleArn:
+    Value: !GetAtt LambdaRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-RoleArn'
+  RoleName:
+    Value: !Ref LambdaRole
+    Export:
+      Name: !Sub '${AWS::StackName}-RoleName'
+
+# COSE Standard: All IAM roles MUST have:
+# - Description explaining purpose
+# - Condition on SourceAccount (prevent confused deputy)
+# - Only necessary managed policies (start with Basic, add as needed)
+# - Standard tags
+# - Explicit trust policy (no wildcards)
+#
+# To add custom policies: Create separate AWS::IAM::Policy resource
+# and attach to this role. Keep policies in separate files for reusability.
