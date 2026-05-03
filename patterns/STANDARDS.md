@@ -4,23 +4,26 @@
 
 ## Tagging Standards
 
-**ALL resources MUST have these 7 tags:**
+**ALL resources MUST have these 3 mandatory tags (Marathon Health standard):**
+
+| Tag | Purpose | Allowed Values |
+|-----|---------|----------------|
+| `mh:application` | Logical application or service | See application list (lowercase, kebab-case) |
+| `mh:environment` | Deployment environment | `dev`, `qa`, `stage`, `prod`, `sandbox`, `unknown` |
+| `mh:business-unit` | Owning business unit | `platform-engineering`, `product-engineering`, `data-analytics`, `cose`, `security`, `service-desk`, `unknown` |
+
+**Additional COSE-recommended tags (not enforced org-wide yet):**
 
 | Tag | Purpose | Example |
 |-----|---------|---------|
-| `Owner` | Team responsible | `COSE` |
-| `Department` | Business unit | `IT Operations` |
-| `Application` | What it's for | `WorkSpaces Lifecycle Automation` |
-| `Environment` | Environment | `prod`, `staging`, `qa`, `dev` |
-| `CreatedBy` | How created | `CloudFormation`, `Terraform` |
-| `ManagedBy` | What manages it | `COSE-AWS-Automation`, `IAC_project_xyz` |
-| `CostCenter` | Billing | `Platform Engineering`, `Data Team` |
+| `mh:managed-by` | Tool that provisioned | `terraform`, `cloudformation`, `cdk`, `console`, `manual` |
+| `mh:owner` | Owning team distribution list | `platformeng@marathon.health` |
 
 **Why these tags:**
-- Cost allocation (CostCenter, Application)
-- Ownership (Owner, Department)
-- Automation (ManagedBy, CreatedBy)
-- Environment isolation (Environment)
+- Cost allocation (`mh:application`, `mh:business-unit`)
+- Ownership (`mh:business-unit`, `mh:owner`)
+- Environment isolation (`mh:environment`)
+- Automation tracking (`mh:managed-by`)
 
 ## Security Standards
 

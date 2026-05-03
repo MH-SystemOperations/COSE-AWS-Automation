@@ -6,20 +6,22 @@ Parameters:
     Type: String
     Description: 'Name of the DynamoDB table'
 
-  OwnerTag:
+  Application:
     Type: String
-    Default: 'COSE'
-    Description: 'Owner team name'
+    Description: 'Application name (lowercase, kebab-case)'
+    AllowedPattern: '^[a-z0-9-]+$'
 
-  ApplicationTag:
-    Type: String
-    Description: 'Application name'
-
-  EnvironmentTag:
+  Environment:
     Type: String
     Default: 'prod'
-    AllowedValues: ['dev', 'qa', 'staging', 'prod']
+    AllowedValues: ['dev', 'qa', 'stage', 'prod', 'sandbox', 'unknown']
     Description: 'Environment'
+
+  BusinessUnit:
+    Type: String
+    Default: 'cose'
+    AllowedValues: ['platform-engineering', 'product-engineering', 'data-analytics', 'cose', 'security', 'service-desk', 'unknown']
+    Description: 'Owning business unit'
 
 Resources:
   Table:
@@ -39,18 +41,14 @@ Resources:
         SSEEnabled: true
         SSEType: KMS
       Tags:
-        - Key: Owner
-          Value: !Ref OwnerTag
-        - Key: Department
-          Value: IT Operations
-        - Key: Application
-          Value: !Ref ApplicationTag
-        - Key: Environment
-          Value: !Ref EnvironmentTag
-        - Key: CreatedBy
-          Value: CloudFormation
-        - Key: ManagedBy
-          Value: COSE-AWS-Automation
+        - Key: mh:application
+          Value: !Ref Application
+        - Key: mh:environment
+          Value: !Ref Environment
+        - Key: mh:business-unit
+          Value: !Ref BusinessUnit
+        - Key: mh:managed-by
+          Value: cloudformation
 
 Outputs:
   TableName:

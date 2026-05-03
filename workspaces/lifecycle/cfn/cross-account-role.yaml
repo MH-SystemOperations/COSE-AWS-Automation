@@ -48,20 +48,14 @@ Resources:
                   - cloudwatch:GetMetricStatistics
                 Resource: '*'
       Tags:
-        - Key: Owner
-          Value: COSE
-        - Key: Department
-          Value: IT Operations
-        - Key: Application
-          Value: WorkSpaces Lifecycle Automation
-        - Key: Environment
+        - Key: mh:application
+          Value: workspaces-lifecycle-automation
+        - Key: mh:environment
           Value: prod
-        - Key: CreatedBy
-          Value: CloudFormation
-        - Key: ManagedBy
-          Value: COSE-AWS-Automation
-        - Key: Purpose
-          Value: Cross-account WorkSpaces lifecycle management
+        - Key: mh:business-unit
+          Value: cose
+        - Key: mh:managed-by
+          Value: cloudformation
 
 Outputs:
   RoleArn:

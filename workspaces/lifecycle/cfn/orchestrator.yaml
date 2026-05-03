@@ -46,20 +46,16 @@ Resources:
         SSEEnabled: true
         SSEType: KMS
       Tags:
-        - Key: Owner
-          Value: COSE
-        - Key: Department
-          Value: IT Operations
-        - Key: Application
-          Value: WorkSpaces Lifecycle Automation
-        - Key: Environment
+        - Key: mh:application
+          Value: workspaces-lifecycle-automation
+        - Key: mh:environment
           Value: prod
-        - Key: CreatedBy
-          Value: CloudFormation
-        - Key: ManagedBy
-          Value: COSE-AWS-Automation
-        - Key: CostCenter
-          Value: Platform Engineering
+        - Key: mh:business-unit
+          Value: cose
+        - Key: mh:managed-by
+          Value: cloudformation
+        - Key: mh:owner
+          Value: cose@marathon.health
 
   # SNS topic for notifications
   NotificationsTopic:
