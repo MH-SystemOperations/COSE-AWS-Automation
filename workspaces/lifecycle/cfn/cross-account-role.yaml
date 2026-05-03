@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'WorkSpaces Lifecycle - Cross-Account IAM Role (StackSet)'
+
+Parameters:
+  ManagementAccountId:
+    Type: String
+    Default: '266565038828'
+    Description: 'AWS account ID of management account where Lambda runs'
+
+Resources:
+  WorkSpacesLifecycleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: WorkSpacesLifecycleRole
+      Description: 'Allows management account Lambda to manage WorkSpaces lifecycle'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${ManagementAccountId}:role/WorkSpacesLifecycleManagerRole'
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WorkSpacesLifecyclePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: DescribeWorkSpaces
+                Effect: Allow
+                Action:
+                  - workspaces:Describe*
+                Resource: '*'
+              - Sid: ManageWorkSpaces
+                Effect: Allow
+                Action:
+                  - workspaces:TerminateWorkspaces
+                  - workspaces:StartWorkspaces
+                  - workspaces:CreateWorkspaceImage
+                  - workspaces:CreateTags
+                  - workspaces:DeleteWorkspaceImage
+                Resource: '*'
+              - Sid: QueryCloudWatch
+                Effect: Allow
+                Action:
+                  - cloudwatch:GetMetricStatistics
+                Resource: '*'
+      Tags:
+        - Key: ManagedBy
+          Value: COSE-AWS-Automation
+        - Key: Purpose
+          Value: WorkSpacesLifecycle
+
+Outputs:
+  RoleArn:
+    Description: 'ARN of the WorkSpaces lifecycle role'
+    Value: !GetAtt WorkSpacesLifecycleRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-RoleArn'

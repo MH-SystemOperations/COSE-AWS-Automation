@@ -1,0 +1,227 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'WorkSpaces Lifecycle Automation - Orchestrator Stack (Management Account)'
+
+Parameters:
+  DryRunMode:
+    Type: String
+    Default: 'true'
+    AllowedValues: ['true', 'false']
+    Description: 'When true, Lambda logs actions but makes no changes'
+
+  UnusedThresholdDays:
+    Type: Number
+    Default: 90
+    Description: 'Days of zero usage before warning email sent'
+
+  WarningPeriodDays:
+    Type: Number
+    Default: 14
+    Description: 'Days between warning and deletion'
+
+Resources:
+  # DynamoDB table for tracking WorkSpace lifecycle state
+  LifecycleTrackingTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: WorkSpacesLifecycleTracking
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: WorkspaceId
+          AttributeType: S
+        - AttributeName: DeletionDate
+          AttributeType: S
+      KeySchema:
+        - AttributeName: WorkspaceId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: DeletionDateIndex
+          KeySchema:
+            - AttributeName: DeletionDate
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Purpose
+          Value: WorkSpacesLifecycleAutomation
+
+  # SNS topic for notifications
+  NotificationsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: WorkSpacesLifecycleNotifications
+      DisplayName: 'WorkSpaces Lifecycle Notifications'
+
+  # Lambda execution role
+  LifecycleManagerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: WorkSpacesLifecycleManagerRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: LifecycleManagerPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:GetItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt LifecycleTrackingTable.Arn
+                  - !Sub '${LifecycleTrackingTable.Arn}/index/*'
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Ref NotificationsTopic
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource: 'arn:aws:iam::*:role/WorkSpacesLifecycleRole'
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/workspaces/lifecycle/*'
+              - Effect: Allow
+                Action:
+                  - organizations:ListAccounts
+                Resource: '*'
+
+  # Lambda function for lifecycle management
+  LifecycleManagerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: WorkSpacesLifecycleManager
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LifecycleManagerRole.Arn
+      Timeout: 900
+      MemorySize: 512
+      Environment:
+        Variables:
+          DRY_RUN_MODE: !Ref DryRunMode
+          TRACKING_TABLE: !Ref LifecycleTrackingTable
+          SNS_TOPIC_ARN: !Ref NotificationsTopic
+          UNUSED_THRESHOLD_DAYS: !Ref UnusedThresholdDays
+          WARNING_PERIOD_DAYS: !Ref WarningPeriodDays
+      Code:
+        ZipFile: |
+          import json
+          import os
+          print('Placeholder - deploy actual code separately')
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': json.dumps('Placeholder')}
+
+  # Lambda for image cleanup
+  ImageCleanupFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: WorkSpacesImageCleanup
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LifecycleManagerRole.Arn
+      Timeout: 300
+      MemorySize: 256
+      Environment:
+        Variables:
+          DRY_RUN_MODE: !Ref DryRunMode
+          TRACKING_TABLE: !Ref LifecycleTrackingTable
+      Code:
+        ZipFile: |
+          import json
+          import os
+          print('Placeholder - deploy actual code separately')
+          def lambda_handler(event, context):
+              return {'statusCode': 200, 'body': json.dumps('Placeholder')}
+
+  # EventBridge rule for weekly lifecycle scan
+  WeeklyScheduleRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: WorkSpacesLifecycleWeeklyScan
+      Description: 'Triggers WorkSpaces lifecycle scan every Monday at 8am EST'
+      ScheduleExpression: 'cron(0 13 ? * MON *)'
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt LifecycleManagerFunction.Arn
+          Id: LifecycleManagerTarget
+
+  # EventBridge rule for daily image cleanup
+  DailyCleanupRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: WorkSpacesImageDailyCleanup
+      Description: 'Triggers WorkSpaces image cleanup daily at 2am EST'
+      ScheduleExpression: 'cron(0 7 * * ? *)'
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ImageCleanupFunction.Arn
+          Id: ImageCleanupTarget
+
+  # Permissions for EventBridge to invoke Lambdas
+  WeeklySchedulePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LifecycleManagerFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt WeeklyScheduleRule.Arn
+
+  DailyCleanupPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt ImageCleanupFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt DailyCleanupRule.Arn
+
+  # SSM Parameters for configuration
+  AccountsToScanParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /workspaces/lifecycle/accounts-to-scan
+      Type: StringList
+      Value: '266565038828,971318514578,480202104756'
+      Description: 'Comma-separated list of AWS account IDs to scan'
+
+  ExcludedUsersParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /workspaces/lifecycle/excluded-users
+      Type: StringList
+      Value: 'CAR-.*,cmh-.*,LAI-.*'
+      Description: 'Regex patterns for usernames to exclude from lifecycle'
+
+Outputs:
+  TrackingTableName:
+    Description: 'DynamoDB table for lifecycle tracking'
+    Value: !Ref LifecycleTrackingTable
+    Export:
+      Name: WorkSpacesLifecycleTrackingTable
+
+  NotificationsTopicArn:
+    Description: 'SNS topic for notifications'
+    Value: !Ref NotificationsTopic
+    Export:
+      Name: WorkSpacesNotificationsTopic
+
+  LifecycleManagerFunctionArn:
+    Description: 'ARN of lifecycle manager Lambda'
+    Value: !GetAtt LifecycleManagerFunction.Arn
+
+  ImageCleanupFunctionArn:
+    Description: 'ARN of image cleanup Lambda'
+    Value: !GetAtt ImageCleanupFunction.Arn
