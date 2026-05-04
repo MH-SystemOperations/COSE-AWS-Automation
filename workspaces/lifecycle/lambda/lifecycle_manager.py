@@ -240,18 +240,19 @@ Our records show this WorkSpace has not been accessed in {UNUSED_THRESHOLD_DAYS}
 To help optimize AWS costs, we're planning to delete unused WorkSpaces.
 
 ACTION REQUIRED:
-If you still need this WorkSpace, please submit a FreshService ticket within {WARNING_PERIOD_DAYS} days.
+If you still need this WorkSpace, take action within {WARNING_PERIOD_DAYS} days.
 
 Scheduled deletion date: {deletion_date.strftime('%B %d, %Y')}
+
+TO KEEP THIS WORKSPACE (choose one):
+1. Log in to your WorkSpace (we'll detect the activity and cancel deletion)
+2. Email servicedesk@marathon-health.org with WorkSpace ID: {ws['WorkspaceId']}
 
 IMPORTANT:
 - A backup image will be created before deletion
 - If deleted, we can restore your WorkSpace from the backup within 90 days
 - Please back up any important files to OneDrive or network storage
 - After 90 days, the backup will be permanently deleted
-
-TO KEEP THIS WORKSPACE:
-Email servicedesk@marathon-health.org with your WorkSpace ID: {ws['WorkspaceId']}
 
 Questions? Contact servicedesk@marathon-health.org
 
