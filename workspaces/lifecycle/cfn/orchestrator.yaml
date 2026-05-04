@@ -57,26 +57,30 @@ Resources:
         - Key: mh:owner
           Value: cose@marathon.health
 
-  # SNS topic for notifications
-  NotificationsTopic:
+  # SNS topic for Lambda failure alerts
+  FailureAlertTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: WorkSpacesLifecycleNotifications
-      DisplayName: 'WorkSpaces Lifecycle Notifications'
+      TopicName: WorkSpacesLifecycleFailureAlerts
+      DisplayName: 'WorkSpaces Lifecycle Failure Alerts'
       KmsMasterKeyId: alias/aws/sns
       Tags:
-        - Key: Owner
-          Value: COSE
-        - Key: Department
-          Value: IT Operations
-        - Key: Application
-          Value: WorkSpaces Lifecycle Automation
-        - Key: Environment
+        - Key: mh:application
+          Value: workspaces-lifecycle-automation
+        - Key: mh:environment
           Value: prod
-        - Key: CreatedBy
-          Value: CloudFormation
-        - Key: ManagedBy
-          Value: COSE-AWS-Automation
+        - Key: mh:business-unit
+          Value: cose
+        - Key: mh:managed-by
+          Value: cloudformation
+
+  # SNS subscription for failure alerts
+  FailureAlertSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: email
+      TopicArn: !Ref FailureAlertTopic
+      Endpoint: cose@marathon.health
 
   # Lambda execution role
   LifecycleManagerRole:
@@ -127,7 +131,6 @@ Resources:
               - Effect: Allow
                 Action:
                   - ses:SendEmail
-                  - ses:SendRawEmail
                 Resource: '*'
               - Sid: AssumeRoleCrossAccount
                 Effect: Allow
@@ -281,6 +284,26 @@ Resources:
       Value: 'CAR-.*,cmh-.*,LAI-.*'
       Description: 'Regex patterns for usernames to exclude from lifecycle'
 
+  # CloudWatch Alarm for Lambda failures
+  LifecycleManagerFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: WorkSpacesLifecycleManager-Failures
+      AlarmDescription: 'Alert when WorkSpaces lifecycle Lambda fails'
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref LifecycleManagerFunction
+      AlarmActions:
+        - !Ref FailureAlertTopic
+      TreatMissingData: notBreaching
+
 Outputs:
   TrackingTableName:
     Description: 'DynamoDB table for lifecycle tracking'
@@ -288,11 +311,11 @@ Outputs:
     Export:
       Name: WorkSpacesLifecycleTrackingTable
 
-  NotificationsTopicArn:
-    Description: 'SNS topic for notifications'
-    Value: !Ref NotificationsTopic
+  FailureAlertTopicArn:
+    Description: 'SNS topic for failure alerts'
+    Value: !Ref FailureAlertTopic
     Export:
-      Name: WorkSpacesNotificationsTopic
+      Name: WorkSpacesFailureAlertsTopic
 
   LifecycleManagerFunctionArn:
     Description: 'ARN of lifecycle manager Lambda'
