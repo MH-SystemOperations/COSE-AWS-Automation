@@ -14,6 +14,7 @@ logger.setLevel(logging.INFO)
 
 # Environment variables
 DRY_RUN = os.environ.get('DRY_RUN_MODE', 'true').lower() == 'true'
+TEST_WORKSPACE_ID = os.environ.get('TEST_WORKSPACE_ID', '')  # For testing - only process this WorkSpace
 TRACKING_TABLE = os.environ['TRACKING_TABLE']
 SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
 UNUSED_THRESHOLD_DAYS = int(os.environ.get('UNUSED_THRESHOLD_DAYS', '90'))
@@ -28,7 +29,10 @@ sts = boto3.client('sts')
 
 def lambda_handler(event, context):
     """Main handler - runs weekly"""
-    logger.info(f"Starting WorkSpaces lifecycle scan (DRY_RUN={DRY_RUN})")
+    test_mode = " TEST_MODE" if TEST_WORKSPACE_ID else ""
+    logger.info(f"Starting WorkSpaces lifecycle scan (DRY_RUN={DRY_RUN}{test_mode})")
+    if TEST_WORKSPACE_ID:
+        logger.info(f"TEST MODE: Only processing WorkSpace {TEST_WORKSPACE_ID}")
 
     # Get configuration
     accounts = get_accounts_to_scan()
@@ -93,11 +97,18 @@ def process_account(account_id: str, excluded_patterns: List[str]) -> Dict:
 
     # Get all WorkSpaces
     workspaces = get_all_workspaces(ws_client)
+    # If TEST_WORKSPACE_ID is set, only process that WorkSpace
+    if TEST_WORKSPACE_ID:
+        workspaces = [ws for ws in workspaces if ws['WorkspaceId'] == TEST_WORKSPACE_ID]
+        if not workspaces:
+            logger.warning(f"TEST_WORKSPACE_ID {TEST_WORKSPACE_ID} not found in account {account_id}")
+            return stats
+
     stats['workspaces_found'] = len(workspaces)
 
     for ws in workspaces:
-        # Skip excluded users
-        if is_excluded(ws['UserName'], excluded_patterns):
+        # Skip excluded users (unless in test mode)
+        if not TEST_WORKSPACE_ID and is_excluded(ws['UserName'], excluded_patterns):
             logger.debug(f"Skipping excluded user: {ws['UserName']}")
             continue
 
