@@ -14,6 +14,7 @@ logger.setLevel(logging.INFO)
 
 # Environment variables
 DRY_RUN = os.environ.get('DRY_RUN_MODE', 'true').lower() == 'true'
+TEST_WORKSPACE_ID = os.environ.get('TEST_WORKSPACE_ID', '').strip()  # For testing - only process this WorkSpace
 TRACKING_TABLE = os.environ['TRACKING_TABLE']
 SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
 UNUSED_THRESHOLD_DAYS = int(os.environ.get('UNUSED_THRESHOLD_DAYS', '90'))
@@ -28,7 +29,10 @@ sts = boto3.client('sts')
 
 def lambda_handler(event, context):
     """Main handler - runs weekly"""
-    logger.info(f"Starting WorkSpaces lifecycle scan (DRY_RUN={DRY_RUN})")
+    test_mode = " TEST_MODE" if TEST_WORKSPACE_ID else ""
+    logger.info(f"Starting WorkSpaces lifecycle scan (DRY_RUN={DRY_RUN}{test_mode})")
+    if TEST_WORKSPACE_ID:
+        logger.info(f"TEST MODE: Only processing WorkSpace {TEST_WORKSPACE_ID}")
 
     # Get configuration
     accounts = get_accounts_to_scan()
@@ -91,13 +95,27 @@ def process_account(account_id: str, excluded_patterns: List[str]) -> Dict:
         logger.error(f"Failed to assume role in {account_id}: {str(e)}")
         return stats
 
-    # Get all WorkSpaces
-    workspaces = get_all_workspaces(ws_client)
+    # Get WorkSpaces (single or all depending on test mode)
+    if TEST_WORKSPACE_ID:
+        # Test mode: Query specific WorkSpace directly
+        try:
+            response = ws_client.describe_workspaces(WorkspaceIds=[TEST_WORKSPACE_ID])
+            workspaces = response.get('Workspaces', [])
+            if not workspaces:
+                logger.warning(f"TEST_WORKSPACE_ID {TEST_WORKSPACE_ID} not found in account {account_id}")
+                return stats
+        except Exception as e:
+            logger.warning(f"TEST_WORKSPACE_ID {TEST_WORKSPACE_ID} not found in account {account_id}: {str(e)}")
+            return stats
+    else:
+        # Production mode: Get all WorkSpaces
+        workspaces = get_all_workspaces(ws_client)
+
     stats['workspaces_found'] = len(workspaces)
 
     for ws in workspaces:
-        # Skip excluded users
-        if is_excluded(ws['UserName'], excluded_patterns):
+        # Skip excluded users (unless in test mode)
+        if not TEST_WORKSPACE_ID and is_excluded(ws['UserName'], excluded_patterns):
             logger.debug(f"Skipping excluded user: {ws['UserName']}")
             continue
 
@@ -229,10 +247,13 @@ Our records show this WorkSpace has not been accessed in {UNUSED_THRESHOLD_DAYS}
 To help optimize AWS costs, we're planning to delete unused WorkSpaces.
 
 ACTION REQUIRED:
-If you still need this WorkSpace, please reply to this email within {WARNING_PERIOD_DAYS} days.
+If you still need this WorkSpace, take action within {WARNING_PERIOD_DAYS} days.
 
-If we don't hear from you by {deletion_date.strftime('%B %d, %Y')},
-the WorkSpace will be deleted on {(deletion_date + timedelta(days=1)).strftime('%B %d, %Y')}.
+Scheduled deletion date: {deletion_date.strftime('%B %d, %Y')}
+
+TO KEEP THIS WORKSPACE (choose one):
+1. Log in to your WorkSpace (we'll detect the activity and cancel deletion)
+2. Email servicedesk@marathon-health.org with WorkSpace ID: {ws['WorkspaceId']}
 
 IMPORTANT:
 - A backup image will be created before deletion
@@ -240,11 +261,10 @@ IMPORTANT:
 - Please back up any important files to OneDrive or network storage
 - After 90 days, the backup will be permanently deleted
 
-If you have questions, please reply to this email.
+Questions? Contact servicedesk@marathon-health.org
 
 ---
 This is an automated message from COSE AWS Automation.
-To cancel deletion, reply to this email or contact IT Support.
     """
 
     if DRY_RUN:
