@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'COSE Standard: StackSet Execution Role (Target Accounts)'
+
+Parameters:
+  AdministratorAccountId:
+    Type: String
+    Default: '266565038828'
+    Description: 'AWS account ID of management account (mh-ops)'
+    AllowedPattern: '^\d{12}$'
+
+Resources:
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AWSCloudFormationStackSetExecutionRole
+      Description: 'Allows management account CloudFormation to create resources in this account via StackSets'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AdministratorAccountId}:role/AWSCloudFormationStackSetAdministrationRole'
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      Tags:
+        - Key: mh:application
+          Value: stacksets-infrastructure
+        - Key: mh:environment
+          Value: prod
+        - Key: mh:business-unit
+          Value: cose
+        - Key: mh:managed-by
+          Value: cloudformation
+
+Outputs:
+  RoleArn:
+    Description: 'ARN of the StackSet execution role'
+    Value: !GetAtt ExecutionRole.Arn
+    Export:
+      Name: StackSetExecutionRoleArn
+
+# COSE Standard: StackSet Execution Role
+#
+# Purpose: Deployed in each target account. Allows management account's
+# CloudFormation service to create/update/delete resources via StackSets.
+#
+# Security:
+# - Only the management account's administration role can assume this
+# - Uses AdministratorAccess to create any resource type
+# - This is AWS's recommended approach for StackSets
+#
+# WARNING: This role has broad permissions. Only use StackSets for
+# infrastructure that requires org-level deployment. For single-account
+# resources, use regular CloudFormation stacks instead.
+#
+# Usage in target accounts:
+#   aws cloudformation create-stack \
+#     --stack-name StackSetExecutionRole \
+#     --template-body file://execution-role.yaml \
+#     --capabilities CAPABILITY_NAMED_IAM \
+#     --profile <target-account-profile> --region us-east-1
+#
+# Or deploy via StackSet once the roles exist (chicken-and-egg solved
+# by deploying this template manually first time).

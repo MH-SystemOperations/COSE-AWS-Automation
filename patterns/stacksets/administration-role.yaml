@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'COSE Standard: StackSet Administration Role (Management Account)'
+
+Resources:
+  AdministrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: AWSCloudFormationStackSetAdministrationRole
+      Description: 'Allows CloudFormation to assume execution roles in target accounts for StackSet operations'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AssumeStackSetExecutionRole
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sts:AssumeRole
+                Resource:
+                  - 'arn:aws:iam::*:role/AWSCloudFormationStackSetExecutionRole'
+      Tags:
+        - Key: mh:application
+          Value: stacksets-infrastructure
+        - Key: mh:environment
+          Value: prod
+        - Key: mh:business-unit
+          Value: cose
+        - Key: mh:managed-by
+          Value: cloudformation
+
+Outputs:
+  RoleArn:
+    Description: 'ARN of the StackSet administration role'
+    Value: !GetAtt AdministrationRole.Arn
+    Export:
+      Name: StackSetAdministrationRoleArn
+
+# COSE Standard: StackSet Administration Role
+#
+# Purpose: Deployed once in management account (mh-ops). Allows CloudFormation
+# service to assume execution roles in target accounts for StackSet deployments.
+#
+# Security:
+# - Only CloudFormation service can assume (not users, not Lambdas)
+# - Can only assume role named exactly "AWSCloudFormationStackSetExecutionRole"
+# - No wildcard permissions
+# - No direct resource creation (delegates to execution role)
+#
+# Usage:
+#   aws cloudformation create-stack \
+#     --stack-name StackSetAdministrationRole \
+#     --template-body file://administration-role.yaml \
+#     --capabilities CAPABILITY_NAMED_IAM \
+#     --profile mh-ops --region us-east-1

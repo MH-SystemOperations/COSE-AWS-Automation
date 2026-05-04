@@ -135,7 +135,7 @@ Resources:
                 Resource:
                   - !Sub 'arn:aws:iam::266565038828:role/WorkSpacesLifecycleRole'
                   - !Sub 'arn:aws:iam::971318514578:role/WorkSpacesLifecycleRole'
-                  - !Sub 'arn:aws:iam::480202104756:role/WorkSpacesLifecycleRole'
+                  - !Sub 'arn:aws:iam::339712701706:role/WorkSpacesLifecycleRole'
               - Effect: Allow
                 Action:
                   - ssm:GetParameter
@@ -270,7 +270,7 @@ Resources:
     Properties:
       Name: /workspaces/lifecycle/accounts-to-scan
       Type: StringList
-      Value: '266565038828,971318514578,480202104756'
+      Value: '266565038828,971318514578,339712701706'
       Description: 'Comma-separated list of AWS account IDs to scan'
 
   ExcludedUsersParameter:
