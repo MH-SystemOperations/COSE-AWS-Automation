@@ -14,7 +14,7 @@ logger.setLevel(logging.INFO)
 
 # Environment variables
 DRY_RUN = os.environ.get('DRY_RUN_MODE', 'true').lower() == 'true'
-TEST_WORKSPACE_ID = os.environ.get('TEST_WORKSPACE_ID', '')  # For testing - only process this WorkSpace
+TEST_WORKSPACE_ID = os.environ.get('TEST_WORKSPACE_ID', '').strip()  # For testing - only process this WorkSpace
 TRACKING_TABLE = os.environ['TRACKING_TABLE']
 SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
 UNUSED_THRESHOLD_DAYS = int(os.environ.get('UNUSED_THRESHOLD_DAYS', '90'))
@@ -95,14 +95,21 @@ def process_account(account_id: str, excluded_patterns: List[str]) -> Dict:
         logger.error(f"Failed to assume role in {account_id}: {str(e)}")
         return stats
 
-    # Get all WorkSpaces
-    workspaces = get_all_workspaces(ws_client)
-    # If TEST_WORKSPACE_ID is set, only process that WorkSpace
+    # Get WorkSpaces (single or all depending on test mode)
     if TEST_WORKSPACE_ID:
-        workspaces = [ws for ws in workspaces if ws['WorkspaceId'] == TEST_WORKSPACE_ID]
-        if not workspaces:
-            logger.warning(f"TEST_WORKSPACE_ID {TEST_WORKSPACE_ID} not found in account {account_id}")
+        # Test mode: Query specific WorkSpace directly
+        try:
+            response = ws_client.describe_workspaces(WorkspaceIds=[TEST_WORKSPACE_ID])
+            workspaces = response.get('Workspaces', [])
+            if not workspaces:
+                logger.warning(f"TEST_WORKSPACE_ID {TEST_WORKSPACE_ID} not found in account {account_id}")
+                return stats
+        except Exception as e:
+            logger.warning(f"TEST_WORKSPACE_ID {TEST_WORKSPACE_ID} not found in account {account_id}: {str(e)}")
             return stats
+    else:
+        # Production mode: Get all WorkSpaces
+        workspaces = get_all_workspaces(ws_client)
 
     stats['workspaces_found'] = len(workspaces)
 
