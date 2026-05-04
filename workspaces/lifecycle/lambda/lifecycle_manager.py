@@ -240,10 +240,9 @@ Our records show this WorkSpace has not been accessed in {UNUSED_THRESHOLD_DAYS}
 To help optimize AWS costs, we're planning to delete unused WorkSpaces.
 
 ACTION REQUIRED:
-If you still need this WorkSpace, please reply to this email within {WARNING_PERIOD_DAYS} days.
+If you still need this WorkSpace, please submit a FreshService ticket within {WARNING_PERIOD_DAYS} days.
 
-If we don't hear from you by {deletion_date.strftime('%B %d, %Y')},
-the WorkSpace will be deleted on {(deletion_date + timedelta(days=1)).strftime('%B %d, %Y')}.
+Scheduled deletion date: {deletion_date.strftime('%B %d, %Y')}
 
 IMPORTANT:
 - A backup image will be created before deletion
@@ -251,11 +250,13 @@ IMPORTANT:
 - Please back up any important files to OneDrive or network storage
 - After 90 days, the backup will be permanently deleted
 
-If you have questions, please reply to this email.
+TO KEEP THIS WORKSPACE:
+Email servicedesk@marathon-health.org with your WorkSpace ID: {ws['WorkspaceId']}
+
+Questions? Contact servicedesk@marathon-health.org
 
 ---
 This is an automated message from COSE AWS Automation.
-To cancel deletion, reply to this email or contact IT Support.
     """
 
     if DRY_RUN:
