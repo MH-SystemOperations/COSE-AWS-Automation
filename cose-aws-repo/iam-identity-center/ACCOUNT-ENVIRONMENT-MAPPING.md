@@ -53,24 +53,15 @@ MH-Engineer and MH-Lead use `aws:PrincipalAccount` conditions to grant permissio
 
 ---
 
-### 🟡 Staging (Not Yet Defined)
-**Accounts**:
-- 209479269442 - Platform Digital Tools Staging
-
-**Current Status**: Not included in dev/qa group, not included in prod group
-**Permissions**: ReadOnlyAccess only (via managed policy)
-
-**Decision needed**: Should staging be:
-- Option A: Treated like dev/qa (full write access for testing)?
-- Option B: Treated like prod (operational access, deployment via MH-Lead only)?
-- Option C: Hybrid (full write for some services, restricted for others)?
-
----
-
-### 🔴 Production (Operational + Deployment)
+### 🟡 Staging & 🔴 Production (Operational + Deployment)
 **Accounts**:
 - 971318514578 - Platform Data Prod
 - 266565038828 - MH System Operations
+- 209479269442 - Platform Digital Tools Staging
+- 476114142697 - Platform Digital Tools Prod
+- 339712701706 - Pharmacy Prod
+
+**Rationale**: Staging treated like prod to validate deployment processes and catch permission issues before production rollout.
 
 **MH-Engineer Permissions** (Operational):
 - ✅ Lambda invoke (not create/update)
@@ -98,18 +89,14 @@ MH-Engineer and MH-Lead use `aws:PrincipalAccount` conditions to grant permissio
 
 ---
 
-### ⚪ Other Accounts (Not Yet Classified)
+### ⚪ ReadOnly Accounts (Intentionally Limited)
 **Accounts**:
-- 476114142697 - Platform Digital Tools Prod
-- 339712701706 - Pharmacy Prod
-- 126693536052 - CostAnalytics-DataCollection
-- 648300264365 - OurHealth Dev
-- 016592542065 - DevEx
+- 126693536052 - CostAnalytics-DataCollection (dashboards only, no access needed)
+- 648300264365 - OurHealth Dev (unused account)
+- 016592542065 - DevEx (Bedrock access only)
 
-**Current Status**: Assigned MH-Engineer & MH-Lead, but permissions only give ReadOnlyAccess
-**Permissions**: Only the managed `ReadOnlyAccess` policy applies (no write permissions via inline policies)
-
-**Decision needed**: Classify each account as dev/qa/staging/prod to grant appropriate permissions
+**Permissions**: Only the managed `ReadOnlyAccess` policy applies (no write permissions)
+**Rationale**: These accounts have specialized/limited use cases and don't need engineering write access
 
 ---
 

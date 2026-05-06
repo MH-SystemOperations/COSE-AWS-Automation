@@ -274,7 +274,13 @@ Resources:
               "Resource": "*",
               "Condition": {
                 "StringEquals": {
-                  "aws:PrincipalAccount": ["971318514578", "266565038828"],
+                  "aws:PrincipalAccount": [
+                    "971318514578",
+                    "266565038828",
+                    "209479269442",
+                    "476114142697",
+                    "339712701706"
+                  ],
                   "aws:RequestedRegion": "us-east-1"
                 }
               }
