@@ -374,7 +374,7 @@ Resources:
               "Resource": "*",
               "Condition": {
                 "StringNotEquals": {
-                  "aws:PrincipalOrgID": "${aws:ResourceOrgID}"
+                  "aws:PrincipalOrgID": "o-vzuq8g0yfs"
                 }
               }
             }
