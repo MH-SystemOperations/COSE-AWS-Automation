@@ -121,7 +121,6 @@
       "Effect": "Deny",
       "Action": [
         "s3:PutReplicationConfiguration",
-        "s3:PutBucketPublicAccessBlock",
         "s3:DeletePublicAccessBlock",
         "ec2:ModifySnapshotAttribute",
         "rds:ModifyDBSnapshotAttribute",
