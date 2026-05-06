@@ -77,23 +77,25 @@
 **MH-Engineer (Operational Only)**:
 - ✅ **Lambda**: Invoke only (not create/update)
 - ✅ **S3**: Put/delete objects (not buckets)
-- ✅ **DynamoDB**: Full item operations (not table CRUD)
+- ✅ **DynamoDB**: Item operations only (Query, Scan, Get, Put, Update, Delete, BatchGet, BatchWrite - NOT table CRUD)
 - ✅ **SQS**: All operations (purge, redrive DLQ)
-- ✅ **Data Jobs**: Start/stop Glue, Athena, DataBrew, Step Functions (not modify definitions)
-- ✅ **Secrets**: Read and update
-- ✅ **Monitoring**: CloudWatch dashboards, logs, metrics
+- ✅ **Data Jobs**: Start/stop only (Glue, Athena, DataBrew, Step Functions - NOT modify job definitions)
+- ✅ **Secrets**: List and describe metadata ONLY (cannot read secret values)
+- ✅ **Logs**: Search and live tail (not create dashboards or metric filters)
 - ✅ **Cognito**: Resource server management
-- ❌ **NO**: Infrastructure creation, EC2, RDS, ECS, CloudFormation
+- ✅ **SNS**: Read topic attributes (cannot create/delete/modify)
+- ❌ **NO**: Infrastructure creation, EC2, RDS, ECS, CloudFormation, secret values, CloudWatch dashboards
 
 **MH-Lead (Operational + Deployment)**:
 - ✅ **Everything MH-Engineer has PLUS:**
+- ✅ **Secrets**: Can read secret values AND update (for key rotation during deployments)
 - ✅ **Lambda**: Full CRUD (create, update code, delete)
 - ✅ **CloudFormation**: Full stack management
 - ✅ **API Gateway**: Full management
 - ✅ **ECS/ECR**: Full deployment (task definitions, services, images)
 - ✅ **EventBridge/Scheduler**: Full management
 - ✅ **IAM**: Create roles with `dev_boundary` permissions boundary
-- ❌ **NO**: Direct EC2 creation, RDS creation, S3 bucket creation (use CloudFormation)
+- ❌ **NO**: Direct EC2 creation, RDS creation, S3 bucket creation (use CloudFormation), CloudWatch dashboards
 
 **MH-Security**: Same as sandbox
 
