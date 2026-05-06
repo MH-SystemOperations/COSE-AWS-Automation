@@ -1,0 +1,137 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'MH-Lead Permission Set - Elevated role for deployers/leads (TEST with Micah/Keith only)'
+
+Parameters:
+  DryRun:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Set to false to actually create the permission set
+
+Conditions:
+  ShouldCreate: !Equals [!Ref DryRun, 'false']
+
+Resources:
+  MHLeadPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Condition: ShouldCreate
+    Properties:
+      Name: MH-Lead
+      Description: 'Elevated role for deployers/leads - adds infrastructure deployment to MH-Engineer (TEST)'
+      InstanceArn: !Sub 'arn:aws:sso:::instance/ssoins-7223d1577aba4b38'
+      SessionDuration: PT12H
+      InlinePolicy: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "ProdSysOpsElevatedWrite",
+              "Effect": "Allow",
+              "Action": [
+                "lambda:CreateFunction",
+                "lambda:UpdateFunctionCode",
+                "lambda:UpdateFunctionConfiguration",
+                "lambda:DeleteFunction",
+                "lambda:PublishVersion",
+                "lambda:CreateAlias",
+                "lambda:UpdateAlias",
+                "lambda:DeleteAlias",
+                "lambda:PublishLayerVersion",
+                "lambda:DeleteLayerVersion",
+                "lambda:PutFunctionConcurrency",
+                "lambda:DeleteFunctionConcurrency",
+                "lambda:TagResource",
+                "lambda:UntagResource",
+                "lambda:PutFunctionEventInvokeConfig",
+                "lambda:UpdateFunctionEventInvokeConfig",
+                "lambda:DeleteFunctionEventInvokeConfig",
+                "cloudformation:*",
+                "apigateway:*",
+                "execute-api:*",
+                "ecr:*",
+                "ecs:*",
+                "ssm:PutParameter",
+                "ssm:DeleteParameter",
+                "ssm:DeleteParameters",
+                "ssm:AddTagsToResource",
+                "ssm:RemoveTagsFromResource",
+                "ssm:LabelParameterVersion",
+                "xray:*",
+                "events:*",
+                "scheduler:*"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": ["971318514578", "266565038828"],
+                  "aws:RequestedRegion": "us-east-1"
+                }
+              }
+            },
+            {
+              "Sid": "ProdSysOpsElevatedIam",
+              "Effect": "Allow",
+              "Action": [
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy",
+                "iam:PutRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:CreatePolicy",
+                "iam:DeletePolicy",
+                "iam:CreatePolicyVersion",
+                "iam:DeletePolicyVersion",
+                "iam:TagRole",
+                "iam:UntagRole",
+                "iam:UpdateRole",
+                "iam:UpdateRoleDescription"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": ["971318514578", "266565038828"]
+                },
+                "StringLike": {
+                  "iam:PermissionsBoundary": "arn:aws:iam::*:policy/dev_boundary"
+                }
+              }
+            },
+            {
+              "Sid": "ProdDenyLambdaUnsafe",
+              "Effect": "Deny",
+              "Action": ["lambda:Add*", "lambda:*FunctionUrlConfig"],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": ["971318514578", "266565038828"]
+                }
+              }
+            },
+            {
+              "Sid": "ProdDenyCloudFormationUnsafe",
+              "Effect": "Deny",
+              "Action": [
+                "cloudformation:*Typ*",
+                "cloudformation:*OrganizationsAccess"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": ["971318514578", "266565038828"]
+                }
+              }
+            }
+          ]
+        }
+      CustomerManagedPolicyReferences:
+        - Name: MH-Engineer-Guardrails
+          Path: /
+
+Outputs:
+  PermissionSetArn:
+    Description: ARN of the MH-Lead Permission Set
+    Value: !GetAtt MHLeadPermissionSet.PermissionSetArn
+    Condition: ShouldCreate

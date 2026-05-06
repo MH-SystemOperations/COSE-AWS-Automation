@@ -1,0 +1,220 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'MH-Engineer Permission Set - Base role for data platform engineers (TEST with Micah/Keith only)'
+
+Parameters:
+  DryRun:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Set to false to actually create the permission set
+
+Conditions:
+  ShouldCreate: !Equals [!Ref DryRun, 'false']
+
+Resources:
+  MHEngineerPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Condition: ShouldCreate
+    Properties:
+      Name: MH-Engineer
+      Description: 'Base role for data platform engineers - operational access (TEST)'
+      InstanceArn: !Sub 'arn:aws:sso:::instance/ssoins-7223d1577aba4b38'
+      SessionDuration: PT12H
+      ManagedPolicies:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+      InlinePolicy: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DevQaFullWrite",
+              "Effect": "Allow",
+              "Action": [
+                "lambda:*",
+                "cloudformation:*",
+                "s3:*",
+                "sqs:*",
+                "sns:*",
+                "dynamodb:*",
+                "glue:*",
+                "athena:*",
+                "databrew:*",
+                "airflow:*",
+                "states:*",
+                "cloudwatch:*",
+                "logs:*",
+                "secretsmanager:*",
+                "events:*",
+                "scheduler:*",
+                "apigateway:*",
+                "execute-api:*",
+                "cognito-idp:*",
+                "ecr:*",
+                "ecs:*",
+                "kms:*",
+                "ssm:PutParameter",
+                "ssm:DeleteParameter",
+                "ssm:DeleteParameters",
+                "ssm:AddTagsToResource",
+                "ssm:RemoveTagsFromResource",
+                "ssm:LabelParameterVersion",
+                "xray:*",
+                "wafv2:GetWebACL",
+                "wafv2:ListWebACLs",
+                "wafv2:AssociateWebACL",
+                "wafv2:DisassociateWebACL"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": [
+                    "201799325713",
+                    "808468589041",
+                    "686255955782",
+                    "593793032905"
+                  ],
+                  "aws:RequestedRegion": "us-east-1"
+                }
+              }
+            },
+            {
+              "Sid": "DevQaIamScoped",
+              "Effect": "Allow",
+              "Action": [
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy",
+                "iam:PutRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:CreatePolicy",
+                "iam:DeletePolicy",
+                "iam:CreatePolicyVersion",
+                "iam:DeletePolicyVersion",
+                "iam:PassRole",
+                "iam:TagRole",
+                "iam:UntagRole",
+                "iam:UpdateRole",
+                "iam:UpdateRoleDescription"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": [
+                    "201799325713",
+                    "808468589041",
+                    "686255955782",
+                    "593793032905"
+                  ]
+                },
+                "StringLike": {
+                  "iam:PermissionsBoundary": "arn:aws:iam::*:policy/dev_boundary"
+                }
+              }
+            },
+            {
+              "Sid": "DevOnlyRdsWrite",
+              "Effect": "Allow",
+              "Action": ["rds:*"],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": ["201799325713", "686255955782"]
+                }
+              }
+            },
+            {
+              "Sid": "ProdSysOpsOperationalWrite",
+              "Effect": "Allow",
+              "Action": [
+                "lambda:InvokeFunction",
+                "lambda:InvokeAsync",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:DeleteObjects",
+                "s3:PutObjectTagging",
+                "s3:DeleteObjectTagging",
+                "s3:PutLifecycleConfiguration",
+                "sqs:*",
+                "cloudwatch:PutDashboard",
+                "cloudwatch:DeleteDashboards",
+                "cloudwatch:PutMetricFilter",
+                "cloudwatch:DeleteMetricFilter",
+                "logs:FilterLogEvents",
+                "logs:StartLiveTail",
+                "logs:StopLiveTail",
+                "logs:PutMetricFilter",
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:ListSecrets",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:UpdateSecret",
+                "airflow:*",
+                "cognito-idp:CreateResourceServer",
+                "cognito-idp:UpdateResourceServer",
+                "cognito-idp:DeleteResourceServer",
+                "cognito-idp:DescribeResourceServer",
+                "cognito-idp:UpdateUserPoolClient",
+                "cognito-idp:ListUsers",
+                "sns:CreateTopic",
+                "sns:DeleteTopic",
+                "sns:GetTopicAttributes",
+                "sns:SetTopicAttributes",
+                "glue:*",
+                "athena:*",
+                "databrew:*",
+                "dynamodb:*",
+                "states:*",
+                "kms:ListAliases",
+                "kms:DescribeKey",
+                "kms:Decrypt",
+                "kms:GenerateDataKey"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": ["971318514578", "266565038828"],
+                  "aws:RequestedRegion": "us-east-1"
+                }
+              }
+            },
+            {
+              "Sid": "ProdSysOpsIamPassRole",
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": ["971318514578", "266565038828"]
+                },
+                "StringLike": {
+                  "iam:PassedToService": [
+                    "lambda.amazonaws.com",
+                    "databrew.amazonaws.com",
+                    "airflow.amazonaws.com",
+                    "scheduler.amazonaws.com"
+                  ]
+                }
+              }
+            },
+            {
+              "Sid": "DenyTerraformBucket",
+              "Effect": "Deny",
+              "Action": "s3:*",
+              "Resource": [
+                "arn:aws:s3:::marathonhealth-terraform",
+                "arn:aws:s3:::marathonhealth-terraform/*"
+              ]
+            }
+          ]
+        }
+      CustomerManagedPolicyReferences:
+        - Name: MH-Engineer-Guardrails
+          Path: /
+
+Outputs:
+  PermissionSetArn:
+    Description: ARN of the MH-Engineer Permission Set
+    Value: !GetAtt MHEngineerPermissionSet.PermissionSetArn
+    Condition: ShouldCreate
