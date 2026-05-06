@@ -53,18 +53,13 @@ Resources:
                 "cognito-idp:*",
                 "ecr:*",
                 "ecs:*",
+                "ec2:*",
+                "elasticloadbalancing:*",
+                "autoscaling:*",
                 "kms:*",
-                "ssm:PutParameter",
-                "ssm:DeleteParameter",
-                "ssm:DeleteParameters",
-                "ssm:AddTagsToResource",
-                "ssm:RemoveTagsFromResource",
-                "ssm:LabelParameterVersion",
+                "ssm:*",
                 "xray:*",
-                "wafv2:GetWebACL",
-                "wafv2:ListWebACLs",
-                "wafv2:AssociateWebACL",
-                "wafv2:DisassociateWebACL"
+                "wafv2:*"
               ],
               "Resource": "*",
               "Condition": {
