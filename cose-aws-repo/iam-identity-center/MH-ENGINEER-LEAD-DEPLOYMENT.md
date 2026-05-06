@@ -69,7 +69,7 @@ Two new **org-wide** permission sets for engineering/data platform work:
 
 ## Guardrails (Applied to Both)
 
-Customer-managed policy: `MH-Engineer-Guardrails`
+Inline policy statements (included in both permission sets):
 
 **Blocks**:
 - IAM user creation
@@ -89,50 +89,7 @@ Customer-managed policy: `MH-Engineer-Guardrails`
 
 ## Deployment Steps
 
-### Phase 1: Create Customer-Managed Policy (Guardrails)
-
-**This must be done in EACH account** (all 13 accounts):
-
-```bash
-ACCOUNTS=(
-  "476114142697"  # Platform Digital Tools Prod
-  "971318514578"  # Platform Data Prod
-  "339712701706"  # Pharmacy Prod
-  "266565038828"  # MH System Operations
-  "126693536052"  # CostAnalytics-DataCollection
-  "209479269442"  # Platform Digital Tools Staging
-  "593793032905"  # Platform Digital Tools QA
-  "686255955782"  # Platform Digital Tools Dev
-  "808468589041"  # Platform Data QA
-  "201799325713"  # Platform Data Dev
-  "123185598779"  # Platform Sandbox
-  "648300264365"  # OurHealth Dev
-  "016592542065"  # DevEx
-)
-
-for account in "${ACCOUNTS[@]}"; do
-  echo "Creating guardrails policy in account $account"
-  
-  aws iam create-policy \
-    --policy-name MH-Engineer-Guardrails \
-    --policy-document file://policies/mh-engineer-guardrails.json \
-    --description "Guardrails for MH-Engineer and MH-Lead permission sets - org-wide" \
-    --profile mh-ops \
-    --region us-east-1 \
-    || echo "  Policy may already exist in $account"
-done
-```
-
-**Verify**:
-```bash
-aws iam get-policy \
-  --policy-arn arn:aws:iam::201799325713:policy/MH-Engineer-Guardrails \
-  --profile mh-ops
-```
-
----
-
-### Phase 2: Deploy MH-Engineer Permission Set
+### Phase 1: Deploy MH-Engineer Permission Set
 
 ```bash
 aws cloudformation create-stack \
@@ -161,7 +118,7 @@ aws sso-admin list-permission-sets \
 
 ---
 
-### Phase 3: Deploy MH-Lead Permission Set
+### Phase 2: Deploy MH-Lead Permission Set
 
 ```bash
 aws cloudformation create-stack \
@@ -181,7 +138,7 @@ aws cloudformation wait stack-create-complete \
 
 ---
 
-### Phase 4: Assign to Test Users (Micah & Keith)
+### Phase 3: Assign to Test Users (Micah & Keith)
 
 **Create Entra ID Test Group** (if doesn't exist):
 - Group: `AWS MH-Engineer Test`
@@ -329,7 +286,7 @@ aws sso-admin delete-account-assignment \
   --profile mh-ops \
   --region us-east-1
 
-# Delete stacks
+# Delete stacks (guardrails are inline, so no separate cleanup needed)
 aws cloudformation delete-stack \
   --stack-name MH-Lead-PermissionSet \
   --profile mh-ops \
@@ -339,13 +296,6 @@ aws cloudformation delete-stack \
   --stack-name MH-Engineer-PermissionSet \
   --profile mh-ops \
   --region us-east-1
-
-# Delete guardrails policies from each account
-for account in "${ACCOUNTS[@]}"; do
-  aws iam delete-policy \
-    --policy-arn arn:aws:iam::$account:policy/MH-Engineer-Guardrails \
-    --profile mh-ops-$account
-done
 ```
 
 ---
@@ -357,8 +307,6 @@ done
 📋 **Next**: After validation, roll out to Platform Data team  
 
 **Files**:
-- `policies/mh-engineer-base.json` - Base role policy
-- `policies/mh-engineer-guardrails.json` - Guardrails deny policy
-- `policies/mh-lead-ops-delta.json` - Lead additive policy
-- `stacks/02-mh-engineer.yaml` - CloudFormation for MH-Engineer
-- `stacks/03-mh-lead.yaml` - CloudFormation for MH-Lead
+- `stacks/02-mh-engineer.yaml` - CloudFormation for MH-Engineer (includes inline guardrails)
+- `stacks/03-mh-lead.yaml` - CloudFormation for MH-Lead (includes inline guardrails)
+- `scripts/assign-permission-set.py` - Python script for assigning permission sets to users/groups
