@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'MH-Engineer-Guardrails Customer-Managed Policy - Blocks privilege escalation, expensive resources, and audit tampering'
+
+Resources:
+  MHEngineerGuardrailsPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: MH-Engineer-Guardrails
+      Description: 'Guardrails for MH-Engineer and MH-Lead permission sets - blocks privilege escalation, expensive resources, and audit tampering'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyTerraformBucket
+            Effect: Deny
+            Action: 's3:*'
+            Resource:
+              - 'arn:aws:s3:::marathonhealth-terraform'
+              - 'arn:aws:s3:::marathonhealth-terraform/*'
+
+          - Sid: DenyPermissionSetStackModification
+            Effect: Deny
+            Action:
+              - 'cloudformation:UpdateStack'
+              - 'cloudformation:DeleteStack'
+              - 'cloudformation:CancelUpdateStack'
+            Resource:
+              - 'arn:aws:cloudformation:us-east-1:266565038828:stack/MH-Engineer-PermissionSet/*'
+              - 'arn:aws:cloudformation:us-east-1:266565038828:stack/MH-Lead-PermissionSet/*'
+              - 'arn:aws:cloudformation:us-east-1:266565038828:stack/MH-Security-PermissionSet/*'
+
+          - Sid: DenySSOAdminChanges
+            Effect: Deny
+            Action: 'sso-admin:*'
+            Resource: '*'
+
+          - Sid: DenyIdentityStoreChanges
+            Effect: Deny
+            Action: 'identitystore:*'
+            Resource: '*'
+
+          - Sid: DenyIamUserCreation
+            Effect: Deny
+            Action:
+              - 'iam:CreateUser'
+              - 'iam:CreateLoginProfile'
+              - 'iam:CreateAccessKey'
+              - 'iam:AttachUserPolicy'
+              - 'iam:PutUserPolicy'
+              - 'iam:AddUserToGroup'
+            Resource: '*'
+
+          - Sid: DenyBoundaryRemoval
+            Effect: Deny
+            Action:
+              - 'iam:DeleteRolePermissionsBoundary'
+              - 'iam:DeleteUserPermissionsBoundary'
+            Resource: '*'
+
+          - Sid: DenyBoundaryPolicyModification
+            Effect: Deny
+            Action:
+              - 'iam:CreatePolicyVersion'
+              - 'iam:DeletePolicy'
+              - 'iam:DeletePolicyVersion'
+              - 'iam:SetDefaultPolicyVersion'
+            Resource:
+              - 'arn:aws:iam::*:policy/dev_boundary'
+              - 'arn:aws:iam::*:policy/data_engineer'
+
+          - Sid: DenyAssumeRolePolicyUpdate
+            Effect: Deny
+            Action: 'iam:UpdateAssumeRolePolicy'
+            Resource: '*'
+
+          - Sid: DenyPassRoleToPrivilegedRoles
+            Effect: Deny
+            Action: 'iam:PassRole'
+            Resource:
+              - 'arn:aws:iam::*:role/OrganizationAccountAccessRole'
+              - 'arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*'
+
+          - Sid: DenyOrgAndAccountProtection
+            Effect: Deny
+            Action:
+              - 'organizations:*'
+              - 'account:CloseAccount'
+              - 'account:PutAlternateContact'
+            Resource: '*'
+
+          - Sid: DenyAuditServiceTampering
+            Effect: Deny
+            Action:
+              - 'cloudtrail:DeleteTrail'
+              - 'cloudtrail:StopLogging'
+              - 'cloudtrail:UpdateTrail'
+              - 'guardduty:DeleteDetector'
+              - 'guardduty:UpdateDetector'
+              - 'config:DeleteConfigRule'
+              - 'config:DeleteConfigurationRecorder'
+              - 'config:DeleteDeliveryChannel'
+              - 'config:StopConfigurationRecorder'
+              - 'securityhub:DisableSecurityHub'
+              - 'access-analyzer:DeleteAnalyzer'
+              - 'macie2:DisableMacie'
+            Resource: '*'
+
+          - Sid: DenyDataExfiltration
+            Effect: Deny
+            Action:
+              - 's3:PutReplicationConfiguration'
+              - 's3:PutBucketPublicAccessBlock'
+              - 's3:DeletePublicAccessBlock'
+              - 'ec2:ModifySnapshotAttribute'
+              - 'rds:ModifyDBSnapshotAttribute'
+              - 'rds:ModifyDBClusterSnapshotAttribute'
+              - 'dynamodb:ExportTableToPointInTime'
+              - 'logs:PutDestination'
+              - 'logs:PutSubscriptionFilter'
+              - 'elasticfilesystem:PutFileSystemPolicy'
+              - 'elasticfilesystem:DeleteFileSystemPolicy'
+            Resource: '*'
+
+          - Sid: DenyNetworkEgress
+            Effect: Deny
+            Action:
+              - 'ec2:CreateVpcPeeringConnection'
+              - 'ec2:AcceptVpcPeeringConnection'
+              - 'ec2:CreateVpnConnection'
+              - 'ec2:CreateVpnGateway'
+              - 'ec2:AttachVpnGateway'
+              - 'ec2:CreateTransitGateway'
+              - 'ec2:CreateTransitGatewayVpcAttachment'
+              - 'directconnect:*'
+            Resource: '*'
+
+          - Sid: DenyExpensiveInstances
+            Effect: Deny
+            Action: 'ec2:RunInstances'
+            Resource: 'arn:aws:ec2:*:*:instance/*'
+            Condition:
+              ForAnyValue:StringLike:
+                ec2:InstanceType:
+                  - 'g4dn.*'
+                  - 'g5.*'
+                  - 'g6.*'
+                  - 'p3.*'
+                  - 'p4d.*'
+                  - 'p5.*'
+                  - 'inf1.*'
+                  - 'inf2.*'
+                  - 'trn1.*'
+                  - 'trn2.*'
+                  - 'hpc6*'
+                  - 'hpc7*'
+                  - 'x1.*'
+                  - 'x2*'
+
+          - Sid: DenyExpensiveServices
+            Effect: Deny
+            Action:
+              - 'elasticmapreduce:RunJobFlow'
+              - 'sagemaker:CreateHyperParameterTuningJob'
+              - 'redshift:CreateCluster'
+            Resource: '*'
+
+          - Sid: DenyUnencryptedEbs
+            Effect: Deny
+            Action: 'ec2:CreateVolume'
+            Resource: '*'
+            Condition:
+              Bool:
+                ec2:Encrypted: 'false'
+
+          - Sid: DenyCrossAccountAssumeRole
+            Effect: Deny
+            Action: 'sts:AssumeRole'
+            Resource: '*'
+            Condition:
+              StringNotEquals:
+                aws:PrincipalOrgID: 'o-vzuq8g0yfs'
+
+Outputs:
+  PolicyArn:
+    Description: ARN of the MH-Engineer-Guardrails policy
+    Value: !Ref MHEngineerGuardrailsPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-PolicyArn'
+
+  PolicyName:
+    Description: Name of the guardrails policy
+    Value: MH-Engineer-Guardrails
