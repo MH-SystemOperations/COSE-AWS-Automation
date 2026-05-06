@@ -27,6 +27,111 @@ Resources:
           "Version": "2012-10-17",
           "Statement": [
             {
+              "Sid": "SandboxFullAccess",
+              "Effect": "Allow",
+              "Action": "*",
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
+              "Sid": "SandboxDenyMarketplace",
+              "Effect": "Deny",
+              "Action": [
+                "aws-marketplace:*",
+                "aws-marketplace-management:*"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
+              "Sid": "SandboxDenyVpcInfra",
+              "Effect": "Deny",
+              "Action": [
+                "ec2:CreateVpc",
+                "ec2:DeleteVpc",
+                "ec2:ModifyVpcAttribute",
+                "ec2:CreateSubnet",
+                "ec2:DeleteSubnet",
+                "ec2:ModifySubnetAttribute",
+                "ec2:CreateRouteTable",
+                "ec2:DeleteRouteTable",
+                "ec2:AssociateRouteTable",
+                "ec2:DisassociateRouteTable",
+                "ec2:ReplaceRouteTableAssociation",
+                "ec2:CreateRoute",
+                "ec2:DeleteRoute",
+                "ec2:ReplaceRoute",
+                "ec2:CreateInternetGateway",
+                "ec2:DeleteInternetGateway",
+                "ec2:AttachInternetGateway",
+                "ec2:DetachInternetGateway",
+                "ec2:CreateNatGateway",
+                "ec2:DeleteNatGateway",
+                "ec2:CreateEgressOnlyInternetGateway",
+                "ec2:DeleteEgressOnlyInternetGateway"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
+              "Sid": "SandboxDenyIam",
+              "Effect": "Deny",
+              "Action": [
+                "iam:CreateUser",
+                "iam:DeleteUser",
+                "iam:CreateAccessKey",
+                "iam:DeleteAccessKey",
+                "iam:CreateLoginProfile",
+                "iam:DeleteLoginProfile",
+                "iam:AttachUserPolicy",
+                "iam:DetachUserPolicy",
+                "iam:PutUserPolicy",
+                "iam:DeleteUserPolicy",
+                "iam:AddUserToGroup",
+                "iam:RemoveUserFromGroup",
+                "iam:CreateGroup",
+                "iam:DeleteGroup",
+                "iam:CreatePolicy",
+                "iam:DeletePolicy",
+                "iam:CreatePolicyVersion",
+                "iam:DeletePolicyVersion",
+                "iam:SetDefaultPolicyVersion"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
+              "Sid": "SandboxDenySecretValues",
+              "Effect": "Deny",
+              "Action": [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:GetResourcePolicy"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
               "Sid": "ProdSysOpsElevatedWrite",
               "Effect": "Allow",
               "Action": [
