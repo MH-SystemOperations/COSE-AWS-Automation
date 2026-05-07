@@ -1,0 +1,504 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'MH-Engineer Permission Set - Base role for data platform engineers (TEST with Micah/Keith only)'
+
+Parameters:
+  DryRun:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Set to false to actually create the permission set
+
+Conditions:
+  ShouldCreate: !Equals [!Ref DryRun, 'false']
+
+Resources:
+  MHEngineerPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Condition: ShouldCreate
+    Properties:
+      Name: MH-Engineer
+      Description: 'Base role for data platform engineers - operational access (TEST)'
+      InstanceArn: !Sub 'arn:aws:sso:::instance/ssoins-7223d1577aba4b38'
+      SessionDuration: PT12H
+      ManagedPolicies:
+        - arn:aws:iam::aws:policy/ReadOnlyAccess
+      InlinePolicy: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "DevQaFullWrite",
+              "Effect": "Allow",
+              "Action": [
+                "lambda:*",
+                "cloudformation:*",
+                "s3:*",
+                "sqs:*",
+                "sns:*",
+                "dynamodb:*",
+                "glue:*",
+                "athena:*",
+                "databrew:*",
+                "airflow:*",
+                "states:*",
+                "cloudwatch:*",
+                "logs:*",
+                "secretsmanager:*",
+                "events:*",
+                "scheduler:*",
+                "apigateway:*",
+                "execute-api:*",
+                "cognito-idp:*",
+                "ecr:*",
+                "ecs:*",
+                "ec2:*",
+                "elasticloadbalancing:*",
+                "autoscaling:*",
+                "kms:*",
+                "ssm:*",
+                "xray:*",
+                "wafv2:*"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": [
+                    "201799325713",
+                    "808468589041",
+                    "686255955782",
+                    "593793032905"
+                  ],
+                  "aws:RequestedRegion": "us-east-1"
+                }
+              }
+            },
+            {
+              "Sid": "DevQaIamScoped",
+              "Effect": "Allow",
+              "Action": [
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy",
+                "iam:PutRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:CreatePolicy",
+                "iam:DeletePolicy",
+                "iam:CreatePolicyVersion",
+                "iam:DeletePolicyVersion",
+                "iam:PassRole",
+                "iam:TagRole",
+                "iam:UntagRole",
+                "iam:UpdateRole",
+                "iam:UpdateRoleDescription"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": [
+                    "201799325713",
+                    "808468589041",
+                    "686255955782",
+                    "593793032905"
+                  ]
+                },
+                "StringLike": {
+                  "iam:PermissionsBoundary": "arn:aws:iam::*:policy/dev_boundary"
+                }
+              }
+            },
+            {
+              "Sid": "SandboxFullAccess",
+              "Effect": "Allow",
+              "Action": "*",
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
+              "Sid": "SandboxDenyMarketplace",
+              "Effect": "Deny",
+              "Action": [
+                "aws-marketplace:*",
+                "aws-marketplace-management:*"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
+              "Sid": "SandboxDenyVpcInfra",
+              "Effect": "Deny",
+              "Action": [
+                "ec2:CreateVpc",
+                "ec2:DeleteVpc",
+                "ec2:ModifyVpcAttribute",
+                "ec2:CreateSubnet",
+                "ec2:DeleteSubnet",
+                "ec2:ModifySubnetAttribute",
+                "ec2:CreateRouteTable",
+                "ec2:DeleteRouteTable",
+                "ec2:AssociateRouteTable",
+                "ec2:DisassociateRouteTable",
+                "ec2:ReplaceRouteTableAssociation",
+                "ec2:CreateRoute",
+                "ec2:DeleteRoute",
+                "ec2:ReplaceRoute",
+                "ec2:CreateInternetGateway",
+                "ec2:DeleteInternetGateway",
+                "ec2:AttachInternetGateway",
+                "ec2:DetachInternetGateway",
+                "ec2:CreateNatGateway",
+                "ec2:DeleteNatGateway",
+                "ec2:CreateEgressOnlyInternetGateway",
+                "ec2:DeleteEgressOnlyInternetGateway"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
+              "Sid": "SandboxDenyIam",
+              "Effect": "Deny",
+              "Action": [
+                "iam:CreateUser",
+                "iam:DeleteUser",
+                "iam:CreateAccessKey",
+                "iam:DeleteAccessKey",
+                "iam:CreateLoginProfile",
+                "iam:DeleteLoginProfile",
+                "iam:AttachUserPolicy",
+                "iam:DetachUserPolicy",
+                "iam:PutUserPolicy",
+                "iam:DeleteUserPolicy",
+                "iam:AddUserToGroup",
+                "iam:RemoveUserFromGroup",
+                "iam:CreateGroup",
+                "iam:DeleteGroup",
+                "iam:CreatePolicy",
+                "iam:DeletePolicy",
+                "iam:CreatePolicyVersion",
+                "iam:DeletePolicyVersion",
+                "iam:SetDefaultPolicyVersion"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
+              "Sid": "SandboxDenySecretValues",
+              "Effect": "Deny",
+              "Action": [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:GetResourcePolicy"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": "123185598779"
+                }
+              }
+            },
+            {
+              "Sid": "DevOnlyRdsWrite",
+              "Effect": "Allow",
+              "Action": ["rds:*"],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": ["201799325713", "686255955782"]
+                }
+              }
+            },
+            {
+              "Sid": "ProdSysOpsOperationalWrite",
+              "Effect": "Allow",
+              "Action": [
+                "lambda:InvokeFunction",
+                "lambda:InvokeAsync",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:DeleteObjects",
+                "s3:PutObjectTagging",
+                "s3:DeleteObjectTagging",
+                "s3:PutLifecycleConfiguration",
+                "sqs:*",
+                "logs:FilterLogEvents",
+                "logs:StartLiveTail",
+                "logs:StopLiveTail",
+                "secretsmanager:ListSecrets",
+                "secretsmanager:DescribeSecret",
+                "airflow:*",
+                "cognito-idp:CreateResourceServer",
+                "cognito-idp:UpdateResourceServer",
+                "cognito-idp:DeleteResourceServer",
+                "cognito-idp:DescribeResourceServer",
+                "cognito-idp:UpdateUserPoolClient",
+                "cognito-idp:ListUsers",
+                "sns:GetTopicAttributes",
+                "glue:GetJob",
+                "glue:GetJobRun",
+                "glue:GetJobRuns",
+                "glue:StartJobRun",
+                "glue:BatchStopJobRun",
+                "athena:StartQueryExecution",
+                "athena:StopQueryExecution",
+                "athena:GetQueryExecution",
+                "athena:GetQueryResults",
+                "databrew:StartJobRun",
+                "databrew:StopJobRun",
+                "databrew:ListJobRuns",
+                "databrew:DescribeJob",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:BatchGetItem",
+                "dynamodb:BatchWriteItem",
+                "states:StartExecution",
+                "states:StopExecution",
+                "states:DescribeExecution",
+                "states:GetExecutionHistory",
+                "kms:ListAliases",
+                "kms:DescribeKey",
+                "kms:Decrypt",
+                "kms:GenerateDataKey"
+              ],
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": [
+                    "971318514578",
+                    "266565038828",
+                    "209479269442",
+                    "476114142697",
+                    "339712701706"
+                  ],
+                  "aws:RequestedRegion": "us-east-1"
+                }
+              }
+            },
+            {
+              "Sid": "ProdSysOpsIamPassRole",
+              "Effect": "Allow",
+              "Action": "iam:PassRole",
+              "Resource": "*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:PrincipalAccount": ["971318514578", "266565038828"]
+                },
+                "StringLike": {
+                  "iam:PassedToService": [
+                    "lambda.amazonaws.com",
+                    "databrew.amazonaws.com",
+                    "airflow.amazonaws.com",
+                    "scheduler.amazonaws.com"
+                  ]
+                }
+              }
+            },
+            {
+              "Sid": "DenyTerraformBucket",
+              "Effect": "Deny",
+              "Action": "s3:*",
+              "Resource": [
+                "arn:aws:s3:::marathonhealth-terraform",
+                "arn:aws:s3:::marathonhealth-terraform/*"
+              ]
+            },
+            {
+              "Sid": "DenyIamUserCreation",
+              "Effect": "Deny",
+              "Action": [
+                "iam:CreateUser",
+                "iam:CreateLoginProfile",
+                "iam:CreateAccessKey",
+                "iam:AttachUserPolicy",
+                "iam:PutUserPolicy",
+                "iam:AddUserToGroup"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "DenyBoundaryRemoval",
+              "Effect": "Deny",
+              "Action": [
+                "iam:DeleteRolePermissionsBoundary",
+                "iam:DeleteUserPermissionsBoundary"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "DenyBoundaryPolicyModification",
+              "Effect": "Deny",
+              "Action": [
+                "iam:CreatePolicyVersion",
+                "iam:DeletePolicy",
+                "iam:DeletePolicyVersion",
+                "iam:SetDefaultPolicyVersion"
+              ],
+              "Resource": [
+                "arn:aws:iam::*:policy/dev_boundary",
+                "arn:aws:iam::*:policy/data_engineer"
+              ]
+            },
+            {
+              "Sid": "DenyAssumeRolePolicyUpdate",
+              "Effect": "Deny",
+              "Action": "iam:UpdateAssumeRolePolicy",
+              "Resource": "*"
+            },
+            {
+              "Sid": "DenyPassRoleToPrivilegedRoles",
+              "Effect": "Deny",
+              "Action": "iam:PassRole",
+              "Resource": [
+                "arn:aws:iam::*:role/OrganizationAccountAccessRole",
+                "arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*"
+              ]
+            },
+            {
+              "Sid": "DenyOrgAndAccountProtection",
+              "Effect": "Deny",
+              "Action": [
+                "organizations:*",
+                "account:CloseAccount",
+                "account:PutAlternateContact"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "DenyAuditServiceTampering",
+              "Effect": "Deny",
+              "Action": [
+                "cloudtrail:DeleteTrail",
+                "cloudtrail:StopLogging",
+                "cloudtrail:UpdateTrail",
+                "guardduty:DeleteDetector",
+                "guardduty:UpdateDetector",
+                "config:DeleteConfigRule",
+                "config:DeleteConfigurationRecorder",
+                "config:DeleteDeliveryChannel",
+                "config:StopConfigurationRecorder",
+                "securityhub:DisableSecurityHub",
+                "access-analyzer:DeleteAnalyzer",
+                "macie2:DisableMacie"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "DenyDataExfiltration",
+              "Effect": "Deny",
+              "Action": [
+                "s3:PutReplicationConfiguration",
+                "s3:PutBucketPublicAccessBlock",
+                "s3:DeletePublicAccessBlock",
+                "ec2:ModifySnapshotAttribute",
+                "rds:ModifyDBSnapshotAttribute",
+                "rds:ModifyDBClusterSnapshotAttribute",
+                "dynamodb:ExportTableToPointInTime",
+                "logs:PutDestination",
+                "logs:PutSubscriptionFilter",
+                "elasticfilesystem:PutFileSystemPolicy",
+                "elasticfilesystem:DeleteFileSystemPolicy"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "DenyNetworkEgress",
+              "Effect": "Deny",
+              "Action": [
+                "ec2:CreateVpcPeeringConnection",
+                "ec2:AcceptVpcPeeringConnection",
+                "ec2:CreateVpnConnection",
+                "ec2:CreateVpnGateway",
+                "ec2:AttachVpnGateway",
+                "ec2:CreateTransitGateway",
+                "ec2:CreateTransitGatewayVpcAttachment",
+                "directconnect:*"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "DenyExpensiveInstances",
+              "Effect": "Deny",
+              "Action": "ec2:RunInstances",
+              "Resource": "arn:aws:ec2:*:*:instance/*",
+              "Condition": {
+                "ForAnyValue:StringLike": {
+                  "ec2:InstanceType": [
+                    "g4dn.*",
+                    "g5.*",
+                    "g6.*",
+                    "p3.*",
+                    "p4d.*",
+                    "p5.*",
+                    "inf1.*",
+                    "inf2.*",
+                    "trn1.*",
+                    "trn2.*",
+                    "hpc6*",
+                    "hpc7*",
+                    "x1.*",
+                    "x2*"
+                  ]
+                }
+              }
+            },
+            {
+              "Sid": "DenyExpensiveServices",
+              "Effect": "Deny",
+              "Action": [
+                "elasticmapreduce:RunJobFlow",
+                "sagemaker:CreateHyperParameterTuningJob",
+                "redshift:CreateCluster"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "DenyUnencryptedEbs",
+              "Effect": "Deny",
+              "Action": "ec2:CreateVolume",
+              "Resource": "*",
+              "Condition": {
+                "Bool": {
+                  "ec2:Encrypted": "false"
+                }
+              }
+            },
+            {
+              "Sid": "DenyCrossAccountAssumeRole",
+              "Effect": "Deny",
+              "Action": "sts:AssumeRole",
+              "Resource": "*",
+              "Condition": {
+                "StringNotEquals": {
+                  "aws:PrincipalOrgID": "o-vzuq8g0yfs"
+                }
+              }
+            }
+          ]
+        }
+
+Outputs:
+  PermissionSetArn:
+    Description: ARN of the MH-Engineer Permission Set
+    Value: !GetAtt MHEngineerPermissionSet.PermissionSetArn
+    Condition: ShouldCreate

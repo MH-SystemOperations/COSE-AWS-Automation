@@ -1,0 +1,66 @@
+name: Deploy IAM Permission Sets
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'iam-identity-center/stacks/**'
+      - 'iam-identity-center/policies/**'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # For OIDC
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (Management Account)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::266565038828:role/GitHubActionsDeployRole
+          aws-region: us-east-1
+          role-session-name: GitHubActions-PermissionSetDeploy
+
+      - name: Deploy MH-Engineer Permission Set
+        run: |
+          aws cloudformation deploy \
+            --template-file iam-identity-center/stacks/02-mh-engineer.yaml \
+            --stack-name MH-Engineer-PermissionSet \
+            --capabilities CAPABILITY_IAM \
+            --parameter-overrides DryRun=false \
+            --region us-east-1
+
+      - name: Deploy MH-Lead Permission Set
+        run: |
+          aws cloudformation deploy \
+            --template-file iam-identity-center/stacks/03-mh-lead.yaml \
+            --stack-name MH-Lead-PermissionSet \
+            --capabilities CAPABILITY_IAM \
+            --parameter-overrides DryRun=false \
+            --region us-east-1
+
+      - name: Deploy Guardrails (Management Account)
+        run: |
+          aws cloudformation deploy \
+            --template-file iam-identity-center/stacks/04-mh-engineer-guardrails-stackset.yaml \
+            --stack-name MH-Engineer-Guardrails \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --region us-east-1
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ All permission sets deployed successfully"
+          echo "Permission sets will be provisioned to accounts automatically by IAM Identity Center"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed - check logs above"
+          exit 1
