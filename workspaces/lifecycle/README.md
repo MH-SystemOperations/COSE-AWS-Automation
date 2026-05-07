@@ -46,7 +46,9 @@ Automated lifecycle management with safety guardrails:
 - Lambda: WorkSpacesLifecycleManager (weekly scan)
 - Lambda: ImageCleanup (daily cleanup)
 - DynamoDB: WorkSpacesLifecycleTracking (audit trail)
-- SNS: Notifications
+- SES: Direct email delivery to users (`{username}@marathon.health`)
+- SNS: Failure alerts (sent to cose@marathon.health)
+- CloudWatch Alarm: Lambda failure monitoring
 - EventBridge: Schedules
 
 **All Accounts (via StackSet):**

@@ -16,14 +16,13 @@ logger.setLevel(logging.INFO)
 DRY_RUN = os.environ.get('DRY_RUN_MODE', 'true').lower() == 'true'
 TEST_WORKSPACE_ID = os.environ.get('TEST_WORKSPACE_ID', '').strip()  # For testing - only process this WorkSpace
 TRACKING_TABLE = os.environ['TRACKING_TABLE']
-SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
 UNUSED_THRESHOLD_DAYS = int(os.environ.get('UNUSED_THRESHOLD_DAYS', '90'))
 WARNING_PERIOD_DAYS = int(os.environ.get('WARNING_PERIOD_DAYS', '14'))
 
 # AWS clients
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(TRACKING_TABLE)
-sns = boto3.client('sns')
+ses = boto3.client('ses')
 ssm = boto3.client('ssm')
 sts = boto3.client('sts')
 
@@ -232,11 +231,13 @@ def update_tracking(workspace_id: str, status: str):
         logger.error(f"Failed to update tracking for {workspace_id}: {str(e)}")
 
 def send_warning(ws: Dict, account_id: str):
-    """Send warning email to user"""
+    """Send warning email to user via SES"""
     deletion_date = datetime.now() + timedelta(days=WARNING_PERIOD_DAYS)
 
-    message = f"""
-WorkSpace Scheduled for Deletion - Action Required
+    # Construct user email from username
+    user_email = f"{ws['UserName']}@marathon.health"
+
+    message = f"""WorkSpace Scheduled for Deletion - Action Required
 
 Username: {ws['UserName']}
 WorkSpace ID: {ws['WorkspaceId']}
@@ -265,17 +266,20 @@ Questions? Contact servicedesk@marathon-health.org
 
 ---
 This is an automated message from COSE AWS Automation.
-    """
+"""
 
     if DRY_RUN:
-        logger.info(f"[DRY_RUN] Would send warning email for {ws['WorkspaceId']}")
+        logger.info(f"[DRY_RUN] Would send warning email to {user_email} for {ws['WorkspaceId']}")
         logger.debug(f"Message: {message}")
     else:
         try:
-            sns.publish(
-                TopicArn=SNS_TOPIC_ARN,
-                Subject='WorkSpace Scheduled for Deletion - Action Required',
-                Message=message
+            ses.send_email(
+                Source='noreply@marathon.health',
+                Destination={'ToAddresses': [user_email]},
+                Message={
+                    'Subject': {'Data': 'WorkSpace Scheduled for Deletion - Action Required'},
+                    'Body': {'Text': {'Data': message}}
+                }
             )
             # Record warning sent
             table.put_item(Item={
