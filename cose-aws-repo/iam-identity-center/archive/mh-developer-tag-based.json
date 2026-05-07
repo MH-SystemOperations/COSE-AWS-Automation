@@ -1,0 +1,233 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadAllResourcesMetadata",
+      "Effect": "Allow",
+      "Action": [
+        "*:Describe*",
+        "*:Get*",
+        "*:List*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Comment": "Can read metadata about all resources, regardless of environment"
+      }
+    },
+    {
+      "Sid": "S3ReadNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:ListBucket",
+        "s3:ListBucketVersions"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "S3WriteNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "SecretsManagerReadNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "SecretsManagerWriteNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:UpdateSecret"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "SSMParameterReadNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "ssm:GetParametersByPath"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "EC2ManageNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:StartInstances",
+        "ec2:StopInstances",
+        "ec2:RebootInstances",
+        "ec2:TerminateInstances",
+        "ec2:ModifyInstanceAttribute"
+      ],
+      "Resource": "arn:aws:ec2:*:*:instance/*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "RDSConnectNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "rds-db:connect"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "RDSModifyNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "rds:ModifyDBInstance",
+        "rds:RebootDBInstance",
+        "rds:StartDBInstance",
+        "rds:StopDBInstance"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "LambdaInvokeNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:InvokeFunction"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "ECSManageNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:UpdateService",
+        "ecs:StopTask",
+        "ecs:RunTask"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "CloudWatchLogsAllEnvironments",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents",
+        "logs:StartQuery",
+        "logs:StopQuery",
+        "logs:GetQueryResults"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "Comment": "Can read logs in all environments for debugging"
+      }
+    },
+    {
+      "Sid": "CodeCommitFullAccessNonProd",
+      "Effect": "Allow",
+      "Action": [
+        "codecommit:*"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "DenyProductionResourceDeletion",
+      "Effect": "Deny",
+      "Action": [
+        "ec2:TerminateInstances",
+        "rds:DeleteDBInstance",
+        "rds:DeleteDBCluster",
+        "s3:DeleteBucket",
+        "lambda:DeleteFunction",
+        "dynamodb:DeleteTable"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    },
+    {
+      "Sid": "AllowTaggingNonProdResources",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateTags",
+        "ec2:DeleteTags",
+        "rds:AddTagsToResource",
+        "rds:RemoveTagsFromResource",
+        "s3:PutBucketTagging",
+        "lambda:TagResource",
+        "lambda:UntagResource"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringNotEquals": {
+          "aws:ResourceTag/mh:environment": ["prod", "production"]
+        }
+      }
+    }
+  ]
+}
