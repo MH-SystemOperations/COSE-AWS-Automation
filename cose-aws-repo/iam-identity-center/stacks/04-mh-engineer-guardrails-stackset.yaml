@@ -177,7 +177,7 @@ Resources:
             Resource: '*'
             Condition:
               StringNotEquals:
-                aws:PrincipalOrgID: 'o-vzuq8g0yfs'
+                aws:ResourceOrgID: 'o-vzuq8g0yfs'
 
 Outputs:
   PolicyArn:

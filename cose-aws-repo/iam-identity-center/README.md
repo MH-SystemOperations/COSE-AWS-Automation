@@ -7,32 +7,24 @@
 ## Quick Links
 
 - **[Simple Permissions Guide](SIMPLE-PERMISSIONS-GUIDE.md)** - What each role can/can't do
-- **[GitHub Deployment Guide](GITHUB-DEPLOYMENT-GUIDE.md)** - How to deploy changes
-- **[Production Access Review](PROD-ACCESS-REVIEW.md)** - Security analysis
 
 ---
 
-## Our 3 Permission Sets
+## Our 2 Permission Sets
 
 ### MH-Engineer (Operational Access)
 - **Who:** All engineers
 - **Purpose:** Daily operations - troubleshoot, run jobs, fix data
 - **Prod:** Read + limited operational writes (invoke Lambda, S3 objects, DynamoDB items)
 - **Dev/QA:** Full write access
-- **[Details →](stacks/README.md#mh-engineer)**
+- **[Details →](stacks/README.md#02-mh-engineeryaml)**
 
 ### MH-Lead (Deployment Access)
 - **Who:** Senior engineers, deployers
 - **Purpose:** Everything MH-Engineer can do + deploy code to production
 - **Prod:** Deploy Lambda/CloudFormation/ECS, read secrets, create IAM roles
 - **Dev/QA:** Full write access (same as Engineer)
-- **[Details →](stacks/README.md#mh-lead)**
-
-### MH-Security (Security Team)
-- **Who:** Security team
-- **Purpose:** Security audit, incident response
-- **All Accounts:** Full security services, can't modify application infrastructure
-- **[Details →](stacks/README.md#mh-security)**
+- **[Details →](stacks/README.md#03-mh-leadyaml)**
 
 ---
 
@@ -78,7 +70,6 @@ iam-identity-center/
 │
 ├── stacks/                             ← CloudFormation templates (what gets deployed)
 │   ├── README.md                       ← Details on each permission set
-│   ├── 01-mh-security.yaml            ← Security team role
 │   ├── 02-mh-engineer.yaml            ← Base engineering role
 │   ├── 03-mh-lead.yaml                ← Elevated deployment role
 │   └── 04-mh-engineer-guardrails-stackset.yaml  ← Guardrails policy

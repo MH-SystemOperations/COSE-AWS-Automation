@@ -28,7 +28,7 @@ Resources:
               StringEquals:
                 'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
               StringLike:
-                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOrg}/${GitHubRepo}:*'
+                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/main'
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/ReadOnlyAccess
       Policies:
@@ -47,6 +47,10 @@ Resources:
                   - 'cloudformation:DescribeStackResources'
                   - 'cloudformation:GetTemplate'
                   - 'cloudformation:ValidateTemplate'
+                  - 'cloudformation:CreateChangeSet'
+                  - 'cloudformation:ExecuteChangeSet'
+                  - 'cloudformation:DescribeChangeSet'
+                  - 'cloudformation:DeleteChangeSet'
                 Resource:
                   - !Sub 'arn:aws:cloudformation:us-east-1:${AWS::AccountId}:stack/MH-Engineer-PermissionSet/*'
                   - !Sub 'arn:aws:cloudformation:us-east-1:${AWS::AccountId}:stack/MH-Lead-PermissionSet/*'

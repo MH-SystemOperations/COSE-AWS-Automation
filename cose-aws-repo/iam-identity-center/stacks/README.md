@@ -7,29 +7,6 @@ Deployed automatically via GitHub Actions when pushed to `main`.
 
 ## Files
 
-### 01-mh-security.yaml
-**Role:** MH-Security  
-**Purpose:** Security team access for audit and incident response  
-**Session:** 8 hours
-
-**Managed Policies:**
-- `ViewOnlyAccess` - Read all AWS resources
-- `SecurityAudit` - Additional security service read permissions
-
-**Custom Permissions:**
-- Full access to security services (GuardDuty, SecurityHub, Inspector, Macie, WAF, etc.)
-- Security group & NACL management
-- CloudTrail, Config, VPC Flow Logs management
-- KMS key management
-- IAM incident response (disable user access keys)
-
-**Cannot:**
-- Modify application infrastructure (Lambda, EC2, RDS, etc.)
-- Deploy code
-- Create/delete non-security resources
-
----
-
 ### 02-mh-engineer.yaml
 **Role:** MH-Engineer  
 **Purpose:** Base operational access for all engineers  

@@ -1,0 +1,367 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'MH-Security Permission Set - Enhanced security team access (COSE IAM v1.0)'
+
+# ==============================================================================
+# COSE STANDARDS ENFORCED:
+# - Tags: All mandatory Marathon Health tags
+# - Security: Least privilege with environment-based conditions
+# - Modularity: Self-contained, can deploy/destroy independently
+# - Testability: DryRun parameter for validation
+# ==============================================================================
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Permission Set Configuration"
+        Parameters:
+          - PermissionSetName
+          - SessionDuration
+      - Label:
+          default: "Tagging (Marathon Health Standards)"
+        Parameters:
+          - ApplicationTag
+          - EnvironmentTag
+          - BusinessUnitTag
+          - ManagedByTag
+      - Label:
+          default: "Safety Controls"
+        Parameters:
+          - DryRun
+
+Parameters:
+  PermissionSetName:
+    Type: String
+    Default: MH-Security
+    Description: Name of the permission set (kebab-case)
+    AllowedPattern: ^[a-zA-Z0-9-]+$
+
+  SessionDuration:
+    Type: String
+    Default: PT8H
+    Description: Session duration (ISO 8601 format, max PT12H)
+    AllowedValues:
+      - PT1H
+      - PT2H
+      - PT4H
+      - PT8H
+      - PT12H
+
+  ApplicationTag:
+    Type: String
+    Default: iam-identity-center
+    Description: Application name (mh:application tag)
+
+  EnvironmentTag:
+    Type: String
+    Default: prod
+    Description: Environment (mh:environment tag)
+    AllowedValues:
+      - dev
+      - qa
+      - stage
+      - prod
+      - sandbox
+      - test
+
+  BusinessUnitTag:
+    Type: String
+    Default: cose
+    Description: Business unit (mh:business-unit tag)
+    AllowedValues:
+      - cose
+      - platform-engineering
+      - product-engineering
+      - data-analytics
+      - security
+
+  ManagedByTag:
+    Type: String
+    Default: cloudformation
+    Description: Management tool (mh:managed-by tag)
+    AllowedValues:
+      - cloudformation
+      - terraform
+      - manual
+
+  DryRun:
+    Type: String
+    Default: 'true'
+    Description: Set to 'false' to actually create resources (safety control)
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+Conditions:
+  ActuallyCreate: !Equals [!Ref DryRun, 'false']
+
+Resources:
+  # ===========================================================================
+  # PERMISSION SET
+  # ===========================================================================
+  SecurityPermissionSet:
+    Type: AWS::SSO::PermissionSet
+    Condition: ActuallyCreate
+    Properties:
+      Name: !Ref PermissionSetName
+      Description: 'Enhanced security team access - GuardDuty, Security Hub, WAF, security groups, Config remediation, incident response'
+      InstanceArn: !Sub 'arn:aws:sso:::instance/ssoins-7223d1577aba4b38'
+      SessionDuration: !Ref SessionDuration
+
+      # AWS Managed Policies (baseline)
+      ManagedPolicies:
+        - arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+        - arn:aws:iam::aws:policy/SecurityAudit
+
+      # Custom inline policy (enhanced capabilities)
+      InlinePolicy: !Sub |
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "SecurityServicesFullAccess",
+              "Effect": "Allow",
+              "Action": [
+                "guardduty:*",
+                "securityhub:*",
+                "inspector2:*",
+                "access-analyzer:*",
+                "detective:*",
+                "macie2:*"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "ConfigRemediation",
+              "Effect": "Allow",
+              "Action": "config:*",
+              "Resource": "*"
+            },
+            {
+              "Sid": "SecurityGroupManagement",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:AuthorizeSecurityGroupEgress",
+                "ec2:RevokeSecurityGroupEgress",
+                "ec2:ModifySecurityGroupRules",
+                "ec2:CreateSecurityGroup",
+                "ec2:DeleteSecurityGroup",
+                "ec2:UpdateSecurityGroupRuleDescriptionsIngress",
+                "ec2:UpdateSecurityGroupRuleDescriptionsEgress",
+                "ec2:Describe*"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "NetworkACLManagement",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:CreateNetworkAcl",
+                "ec2:CreateNetworkAclEntry",
+                "ec2:DeleteNetworkAcl",
+                "ec2:DeleteNetworkAclEntry",
+                "ec2:ReplaceNetworkAclAssociation",
+                "ec2:ReplaceNetworkAclEntry"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "WAFManagement",
+              "Effect": "Allow",
+              "Action": [
+                "wafv2:*",
+                "waf:*",
+                "waf-regional:*"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "CloudTrailManagement",
+              "Effect": "Allow",
+              "Action": "cloudtrail:*",
+              "Resource": "*"
+            },
+            {
+              "Sid": "VPCFlowLogsManagement",
+              "Effect": "Allow",
+              "Action": [
+                "ec2:CreateFlowLogs",
+                "ec2:DeleteFlowLogs",
+                "ec2:DescribeFlowLogs"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "KMSKeyManagement",
+              "Effect": "Allow",
+              "Action": [
+                "kms:CreateKey",
+                "kms:CreateAlias",
+                "kms:DeleteAlias",
+                "kms:Describe*",
+                "kms:List*",
+                "kms:GetKeyPolicy",
+                "kms:GetKeyRotationStatus",
+                "kms:PutKeyPolicy",
+                "kms:EnableKeyRotation",
+                "kms:DisableKey",
+                "kms:ScheduleKeyDeletion",
+                "kms:TagResource",
+                "kms:UntagResource"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "IAMSecurityAudit",
+              "Effect": "Allow",
+              "Action": [
+                "iam:Get*",
+                "iam:List*",
+                "iam:GenerateCredentialReport",
+                "iam:GenerateServiceLastAccessedDetails",
+                "iam:SimulatePrincipalPolicy",
+                "iam:SimulateCustomPolicy"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "IAMIncidentResponse",
+              "Effect": "Allow",
+              "Action": [
+                "iam:UpdateAccessKey",
+                "iam:DeleteAccessKey",
+                "iam:UpdateLoginProfile",
+                "iam:DeleteLoginProfile"
+              ],
+              "Resource": "arn:aws:iam::*:user/*"
+            },
+            {
+              "Sid": "SSMSessionManagerForensics",
+              "Effect": "Allow",
+              "Action": [
+                "ssm:StartSession",
+                "ssm:TerminateSession",
+                "ssm:ResumeSession",
+                "ssm:DescribeSessions",
+                "ssm:GetConnectionStatus",
+                "ssm:DescribeInstanceInformation",
+                "ssm:DescribeInstanceProperties",
+                "ssm:SendCommand",
+                "ssm:GetCommandInvocation",
+                "ssm:ListCommands"
+              ],
+              "Resource": [
+                "arn:aws:ssm:*:*:document/SSM-SessionManagerRunShell",
+                "arn:aws:ssm:*:*:document/AWS-StartSSHSession",
+                "arn:aws:ec2:*:*:instance/*",
+                "arn:aws:ssm:*:*:*"
+              ],
+              "Condition": {
+                "BoolIfExists": {
+                  "ssm:SessionDocumentAccessCheck": "true"
+                }
+              }
+            },
+            {
+              "Sid": "CloudWatchLogsForensics",
+              "Effect": "Allow",
+              "Action": [
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams",
+                "logs:GetLogEvents",
+                "logs:FilterLogEvents",
+                "logs:StartQuery",
+                "logs:StopQuery",
+                "logs:DescribeQueries",
+                "logs:GetQueryResults"
+              ],
+              "Resource": "*"
+            },
+            {
+              "Sid": "S3SecurityLogsAccess",
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+              ],
+              "Resource": [
+                "arn:aws:s3:::*cloudtrail*",
+                "arn:aws:s3:::*cloudtrail*/*",
+                "arn:aws:s3:::*securitylogs*",
+                "arn:aws:s3:::*securitylogs*/*",
+                "arn:aws:s3:::*config*",
+                "arn:aws:s3:::*config*/*",
+                "arn:aws:s3:::*guardduty*",
+                "arn:aws:s3:::*guardduty*/*"
+              ]
+            },
+            {
+              "Sid": "SNSForAlerts",
+              "Effect": "Allow",
+              "Action": [
+                "sns:CreateTopic",
+                "sns:Subscribe",
+                "sns:Unsubscribe",
+                "sns:Publish",
+                "sns:ListTopics",
+                "sns:ListSubscriptions",
+                "sns:GetTopicAttributes",
+                "sns:SetTopicAttributes"
+              ],
+              "Resource": "arn:aws:sns:*:*:*security*"
+            },
+            {
+              "Sid": "SupportAccess",
+              "Effect": "Allow",
+              "Action": "support:*",
+              "Resource": "*"
+            }
+          ]
+        }
+
+      Tags:
+        - Key: mh:application
+          Value: !Ref ApplicationTag
+        - Key: mh:environment
+          Value: !Ref EnvironmentTag
+        - Key: mh:business-unit
+          Value: !Ref BusinessUnitTag
+        - Key: mh:managed-by
+          Value: !Ref ManagedByTag
+        - Key: mh:owner
+          Value: platformeng@marathon.health
+        - Key: Version
+          Value: '1.0'
+        - Key: ConsolidatesPermissionSet
+          Value: SecurityTeam
+
+Outputs:
+  PermissionSetArn:
+    Description: ARN of the MH-Security permission set
+    Value: !If
+      - ActuallyCreate
+      - !GetAtt SecurityPermissionSet.PermissionSetArn
+      - 'DRY-RUN-MODE-NO-RESOURCES-CREATED'
+    Export:
+      Name: !Sub '${AWS::StackName}-PermissionSetArn'
+
+  PermissionSetName:
+    Description: Name of the permission set
+    Value: !Ref PermissionSetName
+    Export:
+      Name: !Sub '${AWS::StackName}-PermissionSetName'
+
+  DryRunMode:
+    Description: Whether this was a dry run
+    Value: !Ref DryRun
+
+  ConsolidatedPermissionSets:
+    Description: Old permission sets replaced by this one
+    Value: 'SecurityTeam (11 accounts, 1 user each)'
+
+  DeploymentInstructions:
+    Description: Next steps after stack creation
+    Value: 'Run: python scripts/assign-permission-set.py --permission-set MH-Security --user security@marathon.health --account 123185598779'

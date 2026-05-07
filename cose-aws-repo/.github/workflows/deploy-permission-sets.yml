@@ -45,15 +45,6 @@ jobs:
             --parameter-overrides DryRun=false \
             --region us-east-1
 
-      - name: Deploy MH-Security Permission Set
-        run: |
-          aws cloudformation deploy \
-            --template-file iam-identity-center/stacks/01-mh-security.yaml \
-            --stack-name MH-Security-PermissionSet \
-            --capabilities CAPABILITY_IAM \
-            --parameter-overrides DryRun=false \
-            --region us-east-1
-
       - name: Deploy Guardrails (Management Account)
         run: |
           aws cloudformation deploy \
