@@ -1,0 +1,208 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Reusable S3 Lifecycle Policy for Backup Retention Management
+
+  Features:
+  - Tag-based retention (Weekly vs Monthly)
+  - Automatic storage class transitions
+  - Cost-optimized tiering
+  - Configurable retention periods
+
+  Usage: Apply to any backup bucket with differentiated weekly/monthly retention needs
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Bucket Configuration"
+        Parameters:
+          - BackupBucketName
+          - Environment
+      - Label:
+          default: "Weekly Backup Retention"
+        Parameters:
+          - WeeklyRetentionDays
+          - WeeklyToIADays
+          - WeeklyToGlacierDays
+      - Label:
+          default: "Monthly Backup Retention"
+        Parameters:
+          - MonthlyRetentionDays
+          - MonthlyToGlacierDays
+      - Label:
+          default: "Advanced Options"
+        Parameters:
+          - EnableNoncurrentVersionExpiration
+          - EnableIntelligentTiering
+
+Parameters:
+  BackupBucketName:
+    Type: String
+    Description: Name of the S3 bucket to apply lifecycle policy to
+    AllowedPattern: ^[a-z0-9][a-z0-9-]*[a-z0-9]$
+    ConstraintDescription: Must be a valid S3 bucket name
+
+  Environment:
+    Type: String
+    Description: Environment tag for the lifecycle policy
+    Default: Production
+    AllowedValues:
+      - Production
+      - Staging
+      - Development
+
+  WeeklyRetentionDays:
+    Type: Number
+    Description: Total retention for weekly backups (days)
+    Default: 90
+    MinValue: 7
+    MaxValue: 365
+
+  WeeklyToIADays:
+    Type: Number
+    Description: Transition weekly backups to Standard-IA after (days)
+    Default: 14
+    MinValue: 1
+    MaxValue: 364
+
+  WeeklyToGlacierDays:
+    Type: Number
+    Description: Transition weekly backups to Glacier after (days)
+    Default: 60
+    MinValue: 1
+    MaxValue: 364
+
+  MonthlyRetentionDays:
+    Type: Number
+    Description: Total retention for monthly backups (days, 395 = 13 months)
+    Default: 395
+    MinValue: 30
+    MaxValue: 2555
+
+  MonthlyToGlacierDays:
+    Type: Number
+    Description: Transition monthly backups to Glacier after (days, 1 = immediate)
+    Default: 1
+    MinValue: 1
+    MaxValue: 365
+
+  EnableNoncurrentVersionExpiration:
+    Type: String
+    Description: Delete noncurrent object versions after 1 day
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  EnableIntelligentTiering:
+    Type: String
+    Description: Enable Intelligent-Tiering for untagged objects
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+Conditions:
+  EnableVersionExpiration: !Equals [!Ref EnableNoncurrentVersionExpiration, 'true']
+  EnableIntelligentTieringOption: !Equals [!Ref EnableIntelligentTiering, 'true']
+
+Resources:
+  BackupLifecycleConfiguration:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Ref BackupBucketName
+      LifecycleConfiguration:
+        Rules:
+          # Rule 1: Weekly backups (tagged Retention=Weekly)
+          - Id: WeeklyBackupRetention
+            Status: Enabled
+            TagFilters:
+              - Key: Retention
+                Value: Weekly
+            Transitions:
+              - TransitionInDays: !Ref WeeklyToIADays
+                StorageClass: STANDARD_IA
+              - TransitionInDays: !Ref WeeklyToGlacierDays
+                StorageClass: GLACIER
+            ExpirationInDays: !Ref WeeklyRetentionDays
+
+          # Rule 2: Monthly backups (tagged Retention=Monthly)
+          - Id: MonthlyBackupRetention
+            Status: Enabled
+            TagFilters:
+              - Key: Retention
+                Value: Monthly
+            Transitions:
+              - TransitionInDays: !Ref MonthlyToGlacierDays
+                StorageClass: GLACIER
+            ExpirationInDays: !Ref MonthlyRetentionDays
+
+          # Rule 3: Untagged backups (default to weekly retention)
+          - Id: DefaultBackupRetention
+            Status: Enabled
+            Prefix: ''
+            Transitions:
+              - TransitionInDays: !Ref WeeklyToIADays
+                StorageClass: STANDARD_IA
+              - TransitionInDays: !Ref WeeklyToGlacierDays
+                StorageClass: GLACIER
+            ExpirationInDays: !Ref WeeklyRetentionDays
+            NoncurrentVersionExpirationInDays: !If [EnableVersionExpiration, 1, !Ref 'AWS::NoValue']
+
+      Tags:
+        - Key: ManagedBy
+          Value: CloudFormation
+        - Key: StackName
+          Value: !Ref AWS::StackName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Purpose
+          Value: BackupLifecycleManagement
+        - Key: CostCenter
+          Value: Infrastructure
+
+Outputs:
+  BucketName:
+    Description: S3 bucket with lifecycle policy applied
+    Value: !Ref BackupBucketName
+    Export:
+      Name: !Sub '${AWS::StackName}-BucketName'
+
+  WeeklyRetentionDays:
+    Description: Retention period for weekly backups
+    Value: !Ref WeeklyRetentionDays
+
+  MonthlyRetentionDays:
+    Description: Retention period for monthly backups
+    Value: !Ref MonthlyRetentionDays
+
+  LifecyclePolicyDetails:
+    Description: Summary of lifecycle policy
+    Value: !Sub |
+      Weekly Backups (Retention=Weekly tag):
+        - Day 0-${WeeklyToIADays}: Standard S3
+        - Day ${WeeklyToIADays}-${WeeklyToGlacierDays}: Standard-IA
+        - Day ${WeeklyToGlacierDays}-${WeeklyRetentionDays}: Glacier
+        - Day ${WeeklyRetentionDays}+: Deleted
+
+      Monthly Backups (Retention=Monthly tag):
+        - Day 0-${MonthlyToGlacierDays}: Standard S3
+        - Day ${MonthlyToGlacierDays}-${MonthlyRetentionDays}: Glacier
+        - Day ${MonthlyRetentionDays}+: Deleted
+
+  EstimatedMonthlyCost:
+    Description: Cost estimation guide (review actual bucket size)
+    Value: |
+      Example for 35 TB total (21 TB weekly + 14 TB monthly):
+        - Standard (0-14d): 6.4 TB × $0.023/GB = $147/mo
+        - Standard-IA (15-60d): 11 TB × $0.0125/GB = $138/mo
+        - Glacier (61d+): 20 TB × $0.004/GB = $80/mo
+        - Total: ~$365/mo = $4,380/year
+
+      Compare to no lifecycle: 246 TB × $0.023/GB = $6,621/mo = $79K/year
+
+  StackDeploymentDate:
+    Description: When this lifecycle policy was deployed
+    Value: !Sub '${AWS::StackName} deployed on ${AWS::StackId}'
