@@ -122,7 +122,7 @@ function Send-CloudWatchMetric {
             --metric-name "$MetricName" `
             --value $Value `
             --unit $Unit `
-            --dimensions "Server=$MetricDimension" `
+            --dimensions Name=Server,Value=$MetricDimension `
             --timestamp $timestamp `
             --no-cli-pager 2>&1 | Out-Null
 
@@ -142,7 +142,8 @@ function Test-S3Bucket {
 
     $bucketName = $Bucket -replace '^s3://', ''
     try {
-        aws s3 ls "s3://$bucketName" --max-items 1 2>&1 | Out-Null
+        # Use head-bucket for access check (faster, more reliable)
+        aws s3api head-bucket --bucket $bucketName 2>&1 | Out-Null
         return $LASTEXITCODE -eq 0
     } catch {
         return $false
@@ -249,16 +250,34 @@ foreach ($file in $backupFiles) {
     try {
         Write-Log "  Uploading to S3..." -Level INFO
 
+        # Step 1: Upload file (aws s3 cp does not support --tagging)
         $uploadOutput = aws s3 cp `
             $file.FullName `
             $s3Key `
             --storage-class STANDARD `
-            --tagging $retentionTag `
             2>&1
 
         if ($LASTEXITCODE -eq 0) {
             $uploadDuration = ((Get-Date) - $uploadStartTime).TotalSeconds
             Write-Log "  Upload completed in $([math]::Round($uploadDuration, 1)) seconds" -Level SUCCESS
+
+            # Step 2: Apply retention tag after upload
+            $bucketName = $S3Bucket -replace '^s3://', ''
+            $objectKey = $file.Name
+
+            Write-Log "  Applying retention tag: $retentionTag" -Level INFO
+            $tagOutput = aws s3api put-object-tagging `
+                --bucket $bucketName `
+                --key $objectKey `
+                --tagging "TagSet=[{Key=Retention,Value=$retentionTag}]" `
+                2>&1
+
+            if ($LASTEXITCODE -ne 0) {
+                Write-Log "  WARNING: Upload succeeded but tagging failed" -Level WARN
+                Write-Log "  Object will use default retention policy" -Level WARN
+            } else {
+                Write-Log "  Retention tag applied successfully" -Level SUCCESS
+            }
 
             # Verify in S3
             $verifyOutput = aws s3 ls $s3Key 2>&1
