@@ -1,0 +1,69 @@
+{
+  "Rules": [
+    {
+      "ID": "WeeklyBackupRetention",
+      "Status": "Enabled",
+      "Filter": {
+        "Tag": {
+          "Key": "Retention",
+          "Value": "Weekly"
+        }
+      },
+      "Transitions": [
+        {
+          "Days": 30,
+          "StorageClass": "STANDARD_IA"
+        },
+        {
+          "Days": 60,
+          "StorageClass": "GLACIER"
+        }
+      ],
+      "Expiration": {
+        "Days": 90
+      }
+    },
+    {
+      "ID": "MonthlyBackupRetention",
+      "Status": "Enabled",
+      "Filter": {
+        "Tag": {
+          "Key": "Retention",
+          "Value": "Monthly"
+        }
+      },
+      "Transitions": [
+        {
+          "Days": 1,
+          "StorageClass": "GLACIER"
+        }
+      ],
+      "Expiration": {
+        "Days": 395
+      }
+    },
+    {
+      "ID": "DefaultBackupRetention",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": ""
+      },
+      "Transitions": [
+        {
+          "Days": 30,
+          "StorageClass": "STANDARD_IA"
+        },
+        {
+          "Days": 60,
+          "StorageClass": "GLACIER"
+        }
+      ],
+      "Expiration": {
+        "Days": 90
+      },
+      "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+      }
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  EDW Backup Lifecycle Policy - 13 Month Retention
+
+  Implements cost-optimized retention for EDW SQL Server backups:
+  - 90 days of weekly backups (tiered: Standard → IA → Glacier)
+  - 9 monthly backups (immediate Glacier, 13-month total retention)
+
+  Cost Impact: $79,452/year → $4,380/year (save $75,072/year)
+
+Parameters:
+  BackupBucketName:
+    Type: String
+    Description: EDW backup S3 bucket name
+    Default: mh-edw-backup
+
+  Environment:
+    Type: String
+    Description: Environment
+    Default: Production
+
+Resources:
+  EDWBackupLifecycle:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./backup-lifecycle-stack.yaml
+      Parameters:
+        BackupBucketName: !Ref BackupBucketName
+        Environment: !Ref Environment
+        WeeklyRetentionDays: 90
+        WeeklyToIADays: 14
+        WeeklyToGlacierDays: 60
+        MonthlyRetentionDays: 395
+        MonthlyToGlacierDays: 1
+        EnableNoncurrentVersionExpiration: 'true'
+        EnableIntelligentTiering: 'false'
+      Tags:
+        - Key: Application
+          Value: EDW
+        - Key: CostCenter
+          Value: DataWarehouse
+        - Key: Owner
+          Value: Jeff
+
+Outputs:
+  BucketName:
+    Description: EDW backup bucket
+    Value: !GetAtt EDWBackupLifecycle.Outputs.BucketName
+
+  CostSavings:
+    Description: Annual cost savings from lifecycle policy
+    Value: "$75,072/year (from $79,452 to $4,380)"
+
+  RetentionSummary:
+    Description: Retention policy summary
+    Value: |
+      Weekly Backups (90 days):
+        - Day 0-14: Standard S3 ($0.023/GB/mo)
+        - Day 15-60: Standard-IA ($0.0125/GB/mo)
+        - Day 61-90: Glacier ($0.004/GB/mo)
+        - Day 90+: Deleted
+
+      Monthly Backups (13 months):
+        - Day 0+: Glacier ($0.004/GB/mo)
+        - Day 395+: Deleted
+
+  DeploymentGuide:
+    Description: Next steps after deployment
+    Value: |
+      1. Deploy PowerShell script to EDW server (E1A-EDW-01)
+      2. Configure Task Scheduler for weekly execution
+      3. Test first upload with manual run
+      4. Monitor S3 bucket size reduction over 90 days
+      5. Verify monthly backup gets tagged correctly on first Sunday
+
+  RelatedResources:
+    Description: Related automation
+    Value: |
+      PowerShell Script: scripts/Upload-Backup-To-S3.ps1
+      Documentation: docs/deployment-guide.md
+      Analysis: ../EDW-BACKUP-JEFF-FEEDBACK-ANALYSIS.md
